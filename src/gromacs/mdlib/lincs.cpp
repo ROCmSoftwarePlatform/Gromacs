@@ -86,6 +86,7 @@
 #include "gromacs/utility/gmxomp.h"
 #include "gromacs/utility/listoflists.h"
 #include "gromacs/utility/pleasecite.h"
+#include "gromacs/gpu_utils/gpu_utils.h"
 
 namespace gmx
 {
@@ -2407,6 +2408,7 @@ bool constrain_lincs(bool                            computeRmsd,
      * We can also easily check if any constraint length is changed,
      * if not dH/dlambda=0 and we can also set the boolean to FALSE.
      */
+    hipRangePush("lincs");
     bool bCalcDHDL = (ir.efep != FreeEnergyPerturbationType::No && dvdlambda != nullptr);
 
     if (lincsd->nc == 0 && cr->dd == nullptr)
@@ -2658,6 +2660,7 @@ bool constrain_lincs(bool                            computeRmsd,
     }
 
     return bOK;
+    hipRangePop();
 }
 
 } // namespace gmx

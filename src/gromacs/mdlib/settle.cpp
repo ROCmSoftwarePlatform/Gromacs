@@ -68,6 +68,8 @@
 #include "gromacs/utility/arrayref.h"
 #include "gromacs/utility/fatalerror.h"
 #include "gromacs/utility/gmxassert.h"
+#include "gromacs/gpu_utils/gpu_utils.h"
+
 
 namespace gmx
 {
@@ -762,6 +764,8 @@ void csettle(const SettleData&               settled,
     real*       xprimePtr = as_rvec_array(xprime.paddedArrayRef().data())[0];
     real*       vPtr      = as_rvec_array(v.paddedArrayRef().data())[0];
 
+    hipRangePush("cSettle");
+
 #if GMX_SIMD_HAVE_REAL
     if (settled.useSimd())
     {
@@ -792,6 +796,7 @@ void csettle(const SettleData&               settled,
         settleTemplateWrapper<real, bool, 1, const t_pbc*>(
                 settled, nthread, thread, pbcNonNull, &xPtr[0], &xprimePtr[0], invdt, &vPtr[0], bCalcVirial, vir_r_m_dr, bErrorHasOccurred);
     }
+    hipRangePop();
 }
 
 } // namespace gmx
