@@ -181,6 +181,8 @@ public:
     bool useGpuBonded = false;
     //! If update and constraint solving is performed on GPU.
     bool useGpuUpdate = false;
+    //! If update is on the GPU and constraints is on the CPU.
+    bool useGpuUpdateCpuLincs = false;
     //! If X buffer operations are performed on GPU.
     bool useGpuXBufferOps = false;
     //! If F buffer operations are performed on GPU.

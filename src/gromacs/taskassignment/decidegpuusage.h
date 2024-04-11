@@ -339,6 +339,19 @@ bool decideWhetherToUseGpuForHalo(bool havePPDomainDecomposition,
                                   bool doRerun,
                                   bool haveEnergyMinimization);
 
+/*! \brief Decide whether to fall back to the CPU for LINCS when doing GPU Update.
+ *
+ * \param[in]  useGpuForUpdate              Whether GPUs will be used for update.
+ * \param[in]  mtop                         The global topology.
+ * \param[in]  mdlog                        MD logger.
+ *
+ * \returns    Whether to fall back to the CPU for LINCS when doing the CPU update
+ */
+bool decideWhetherToFallBackToCpuForLincs(const bool                     useGpuForUpdate,
+                                          const gmx_mtop_t&              mtop,
+                                          const gmx::MDLogger&           mdlog);
+
 } // namespace gmx
+
 
 #endif

@@ -61,23 +61,26 @@ SimulationWorkload createSimulationWorkload(const t_inputrec& inputrec,
                                             PmeRunMode pmeRunMode,
                                             bool       useGpuForBonded,
                                             bool       useGpuForUpdate,
+                                            bool       useGpuForUpdateAndCpuForLincs,
                                             bool       useGpuDirectHalo,
                                             bool       canUseDirectGpuComm,
                                             bool       useGpuPmeDecomposition)
 {
     SimulationWorkload simulationWorkload;
-    simulationWorkload.computeNonbonded = !disableNonbondedCalculation;
-    simulationWorkload.computeNonbondedAtMtsLevel1 =
+    simulationWorkload.computeNonbonded              = !disableNonbondedCalculation;
+    simulationWorkload.computeNonbondedAtMtsLevel1   =
             simulationWorkload.computeNonbonded && inputrec.useMts
             && inputrec.mtsLevels.back().forceGroups[static_cast<int>(MtsForceGroups::Nonbonded)];
-    simulationWorkload.computeMuTot    = inputrecNeedMutot(&inputrec);
-    simulationWorkload.useCpuNonbonded = !useGpuForNonbonded;
-    simulationWorkload.useGpuNonbonded = useGpuForNonbonded;
-    simulationWorkload.useCpuPme       = (pmeRunMode == PmeRunMode::CPU);
-    simulationWorkload.useGpuPme = (pmeRunMode == PmeRunMode::GPU || pmeRunMode == PmeRunMode::Mixed);
+    simulationWorkload.computeMuTot              = inputrecNeedMutot(&inputrec);
+    simulationWorkload.useCpuNonbonded           = !useGpuForNonbonded;
+    simulationWorkload.useGpuNonbonded           = useGpuForNonbonded;
+    simulationWorkload.useCpuPme                 = (pmeRunMode == PmeRunMode::CPU);
+    simulationWorkload.useGpuPme                 = (pmeRunMode == PmeRunMode::GPU 
+                                                   || pmeRunMode == PmeRunMode::Mixed);
     simulationWorkload.useGpuPmeFft              = (pmeRunMode == PmeRunMode::GPU);
     simulationWorkload.useGpuBonded              = useGpuForBonded;
     simulationWorkload.useGpuUpdate              = useGpuForUpdate;
+    simulationWorkload.useGpuUpdateCpuLincs      = useGpuForUpdateAndCpuForLincs;
     simulationWorkload.havePpDomainDecomposition = havePpDomainDecomposition;
     simulationWorkload.useCpuHaloExchange        = havePpDomainDecomposition && !useGpuDirectHalo;
     simulationWorkload.useGpuHaloExchange        = useGpuDirectHalo;

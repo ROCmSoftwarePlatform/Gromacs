@@ -720,12 +720,12 @@ bool decideWhetherToUseGpuForUpdate(const bool                     isDomainDecom
     {
         errorMessage += "Non-connecting constraints are not supported\n";
     }
-    if (!UpdateConstrainGpu::isNumCoupledConstraintsSupported(mtop))
-    {
-        errorMessage +=
-                "The number of coupled constraints is higher than supported in the GPU LINCS "
-                "code.\n";
-    }
+    // if (!UpdateConstrainGpu::isNumCoupledConstraintsSupported(mtop))
+    // {
+    //     errorMessage +=
+    //             "The number of coupled constraints is higher than supported in the GPU LINCS "
+    //             "code.\n";
+    // }
     if (hasAnyConstraints && !UpdateConstrainGpu::areConstraintsSupported())
     {
         errorMessage += "Chosen GPU implementation does not support constraints.\n";
@@ -802,5 +802,26 @@ bool decideWhetherToUseGpuForHalo(bool havePPDomainDecomposition,
     return canUseDirectGpuComm && havePPDomainDecomposition && useGpuForNonbonded
            && !useModularSimulator && !doRerun && !haveEnergyMinimization;
 }
+
+bool decideWhetherToFallBackToCpuForLincs(const bool                     useGpuForUpdate,
+                                          const gmx_mtop_t&              mtop,
+                                          const gmx::MDLogger&           mdlog)
+{
+    //  TODO - add another flag here to check
+    if (useGpuForUpdate && !UpdateConstrainGpu::isNumCoupledConstraintsSupported(mtop))
+    {
+      // If the number of coupled constraints is higher than 1024, and we can still 
+      // benefit from update + settle on the GPU, we fall back to the host for LINCS
+      // and only it
+      GMX_LOG(mdlog.warning)
+                   .asParagraph()
+                   .appendText(
+                            "Update is requested on the GPU, but the number of coupled constrains" 
+                            "is higher than than the maximum supported by the GPU implementation of LINCS."
+                            "Will use the CPU version of LINCS.");
+      return true;
+    } else return false;
+}
+
 
 } // namespace gmx

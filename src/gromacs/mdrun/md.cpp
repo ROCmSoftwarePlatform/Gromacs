@@ -341,6 +341,7 @@ void gmx::LegacySimulator::do_md()
     const bool  useGpuForPme       = simulationWork.useGpuPme;
     const bool  useGpuForNonbonded = simulationWork.useGpuNonbonded;
     const bool  useGpuForUpdate    = simulationWork.useGpuUpdate;
+    const bool  useGpuForUpdateAndCpuForLincs = simulationWork.useGpuUpdateCpuLincs;
 
     /* Check for polarizable models and flexible constraints */
     shellfc = init_shell_flexcon(fplog,
@@ -1553,7 +1554,10 @@ void gmx::LegacySimulator::do_md()
                         (ir->etc != TemperatureCoupling::No
                          && do_per_step(step + ir->nsttcouple - 1, ir->nsttcouple));
 
-                // This applies Leap-Frog, LINCS and SETTLE in succession
+                /* This applies Leap-Frog, LINCS and SETTLE in succession
+                 * If we are tripping the the maximum coupled constraints limit, applies Leap-Frog and SETTLE o
+                 */
+
                 integrator->integrate(stateGpu->getLocalForcesReadyOnDeviceEvent(
                                               runScheduleWork->stepWork, runScheduleWork->simulationWork),
                                       ir->delta_t,

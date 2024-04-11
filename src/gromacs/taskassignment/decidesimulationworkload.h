@@ -69,6 +69,8 @@ struct DevelopmentFeatureFlags;
  * \param[in] useGpuForBonded    Whether bonded interactions are calculated on GPU(s).
  * \param[in] useGpuForUpdate    Whether coordinate update and constraint solving is performed on
  *                               GPU(s).
+
+ * \param[in] useGpuForUpdateAndCpuForLincs  Whether to fallback to the CPU when doing update on GPUs 
  * \param[in] useGpuDirectHalo   Whether halo exchange is performed directly between GPUs.
  * \param[in] canUseDirectGpuComm Whether direct GPU communication can be used in this run.
  * \param[in] useGpuPmeDecomposition GPU based PME decomposition used.
@@ -84,6 +86,7 @@ SimulationWorkload createSimulationWorkload(const t_inputrec& inputrec,
                                             PmeRunMode pmeRunMode,
                                             bool       useGpuForBonded,
                                             bool       useGpuForUpdate,
+                                            bool       useGpuForUpdateAndCpuForLincs,
                                             bool       useGpuDirectHalo,
                                             bool       canUseDirectGpuComm,
                                             bool       useGpuPmeDecomposition);

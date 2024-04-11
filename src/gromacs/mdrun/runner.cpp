@@ -968,11 +968,12 @@ int Mdrunner::mdrunner()
     // Note that when bonded interactions run on a GPU they always run
     // alongside a nonbonded task, so do not influence task assignment
     // even though they affect the force calculation workload.
-    bool useGpuForNonbonded = false;
-    bool useGpuForPme       = false;
-    bool useGpuForBonded    = false;
-    bool useGpuForUpdate    = false;
-    bool gpusWereDetected   = hwinfo_->ngpu_compatible_tot > 0;
+    bool useGpuForNonbonded            = false;
+    bool useGpuForPme                  = false;
+    bool useGpuForBonded               = false;
+    bool useGpuForUpdate               = false;
+    bool useGpuForUpdateAndCpuForLincs = false;
+    bool gpusWereDetected              = hwinfo_->ngpu_compatible_tot > 0;
     try
     {
         // It's possible that there are different numbers of GPUs on
@@ -1327,6 +1328,9 @@ int Mdrunner::mdrunner()
                                                          doRerun,
                                                          devFlags,
                                                          mdlog);
+        useGpuForUpdateAndCpuForLincs = decideWhetherToFallBackToCpuForLincs(useGpuForUpdate,
+                                                                             mtop,
+                                                                             mdlog);
     }
     GMX_CATCH_ALL_AND_EXIT_WITH_FATAL_ERROR
 
@@ -1495,6 +1499,7 @@ int Mdrunner::mdrunner()
                                                               pmeRunMode,
                                                               useGpuForBonded,
                                                               useGpuForUpdate,
+                                                              useGpuForUpdateAndCpuForLincs,
                                                               useGpuDirectHalo,
                                                               canUseDirectGpuComm,
                                                               useGpuPmeDecomposition);
