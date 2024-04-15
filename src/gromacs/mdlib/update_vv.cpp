@@ -411,7 +411,7 @@ void integrateVVSecondStep(int64_t                   step,
     wallcycle_stop(wcycle, WallCycleCounter::Update);
 
     constrain_coordinates(
-            constr, do_log, do_ene, step, state, upd->xp()->arrayRefWithPadding(), dvdl_constr, bCalcVir, shake_vir);
+            constr, do_log, do_ene, step, state, upd->xp()->arrayRefWithPadding(), dvdl_constr, bCalcVir, false, shake_vir);
 
     upd->update_sd_second_half(*ir,
                                step,

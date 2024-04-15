@@ -270,9 +270,9 @@ public:
     double              baros_integral; //!< For Berendsen P-coupling conserved quantity
     real                veta;           //!< Trotter based isotropic P-coupling
     real                vol0; //!< Initial volume,required for computing MTTK conserved quantity
-    PaddedHostVector<gmx::RVec> x;    //!< The coordinates (natoms)
-    PaddedHostVector<gmx::RVec> v;    //!< The velocities (natoms)
-    PaddedHostVector<gmx::RVec> cg_p; //!< p vector for conjugate gradient minimization
+    PaddedHostVector<gmx::RVec> x;     //!< The coordinates (natoms)
+    PaddedHostVector<gmx::RVec> v;     //!< The velocities (natoms)
+    PaddedHostVector<gmx::RVec> cg_p;  //!< p vector for conjugate gradient minimization
 
     ekinstate_t ekinstate; //!< The state of the kinetic energy
 

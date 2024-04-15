@@ -1423,6 +1423,7 @@ void constrain_coordinates(gmx::Constraints*         constr,
                            ArrayRefWithPadding<RVec> xp,
                            real*                     dvdlambda,
                            gmx_bool                  computeVirial,
+                           gmx_bool                  doOnlyLincs, 
                            tensor                    constraintsVirial)
 {
     if (constr != nullptr)

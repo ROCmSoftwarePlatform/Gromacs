@@ -234,6 +234,25 @@ public:
                                 AtomLocality             atomLocality,
                                 GpuEventSynchronizer*    dependency = nullptr);
 
+    /*! \brief Get the constraint coordinates auxiliary buffer on the GPU.
+     *
+     *  \returns GPU constraint coordinate buffer.
+     */
+    DeviceBuffer<RVec> getConstraintCoordinates();
+
+
+    /*! \brief Copy constraints positions from the GPU memory, with an optional explicit dependency.
+     *
+     *  \param[in] h_xp          Positions buffer in the host memory.
+     *  \param[in] atomLocality  Locality of the particles to copy.
+     *  \param[in] dependency    Dependency event for this operation.
+     */
+    void copyConstraintCoordinatesFromGpu(gmx::ArrayRef<gmx::RVec> h_xp,
+                                AtomLocality             atomLocality,
+                                GpuEventSynchronizer*    dependency = nullptr);
+
+
+
     /*! \brief Wait until coordinates are available on the host.
      *
      *  \param[in] atomLocality  Locality of the particles to wait for.
@@ -407,11 +426,13 @@ private:
 
     //! Device positions buffer
     DeviceBuffer<RVec> d_x_;
+    //! Device constraint position buffer
+    DeviceBuffer<RVec> d_xp_;
     //! Number of particles saved in the positions buffer
     int d_xSize_ = -1;
     //! Allocation size for the positions buffer
     int d_xCapacity_ = -1;
-
+    
     //! Device velocities buffer
     DeviceBuffer<RVec> d_v_;
     //! Number of particles saved in the velocities buffer

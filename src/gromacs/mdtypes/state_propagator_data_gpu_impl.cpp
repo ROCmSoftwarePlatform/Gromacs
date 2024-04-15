@@ -100,6 +100,15 @@ DeviceBuffer<RVec> StatePropagatorDataGpu::getCoordinates()
     return {};
 }
 
+DeviceBuffer<RVec> StatePropagatorDataGpu::getConstraintCoordinates()
+{
+    GMX_ASSERT(!impl_,
+               "A CPU stub method from GPU state propagator data was called instead of one from "
+               "GPU implementation.");
+    return {};
+}
+
+
 GpuEventSynchronizer* StatePropagatorDataGpu::getCoordinatesReadyOnDeviceEvent(
         AtomLocality /* atomLocality */,
         const SimulationWorkload& /* simulationWork */,
@@ -164,6 +173,15 @@ void StatePropagatorDataGpu::waitCoordinatesReadyOnHost(AtomLocality /* atomLoca
 }
 
 void StatePropagatorDataGpu::copyCoordinatesFromGpu(gmx::ArrayRef<gmx::RVec> /* h_x          */,
+                                                    AtomLocality /* atomLocality */,
+                                                    GpuEventSynchronizer* /*dependency */)
+{
+    GMX_ASSERT(!impl_,
+               "A CPU stub method from GPU state propagator data was called instead of one from "
+               "GPU implementation.");
+}
+
+void StatePropagatorDataGpu::copyConstraintCoordinatesFromGpu(gmx::ArrayRef<gmx::RVec> /* h_xp          */,
                                                     AtomLocality /* atomLocality */,
                                                     GpuEventSynchronizer* /*dependency */)
 {

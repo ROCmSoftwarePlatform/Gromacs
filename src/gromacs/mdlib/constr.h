@@ -340,6 +340,7 @@ void constrain_coordinates(gmx::Constraints*         constr,
                            ArrayRefWithPadding<RVec> xp,
                            real*                     dvdlambda,
                            bool                      computeVirial,
+                           bool                      doLincsOnGpu,
                            tensor                    constraintsVirial);
 
 } // namespace gmx

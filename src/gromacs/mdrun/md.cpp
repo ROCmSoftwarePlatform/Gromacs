@@ -1518,6 +1518,7 @@ void gmx::LegacySimulator::do_md()
                 if (bNS && (bFirstStep || haveDDAtomOrdering(*cr) || bExchanged))
                 {
                     integrator->set(stateGpu->getCoordinates(),
+                                    stateGpu->getConstraintCoordinates(),
                                     stateGpu->getVelocities(),
                                     realGridSize,
                                     &d_grid,
@@ -1555,7 +1556,8 @@ void gmx::LegacySimulator::do_md()
                          && do_per_step(step + ir->nsttcouple - 1, ir->nsttcouple));
 
                 /* This applies Leap-Frog, LINCS and SETTLE in succession
-                 * If we are tripping the the maximum coupled constraints limit, applies Leap-Frog and SETTLE o
+                 * If we are tripping the the maximum coupled constraints limit, applies Leap-Frog and SETTLE
+                 * on the GPU and calls LINCS on the CPU afterwards  
                  */
 
                 integrator->integrate(stateGpu->getLocalForcesReadyOnDeviceEvent(
@@ -1567,9 +1569,35 @@ void gmx::LegacySimulator::do_md()
                                       doTemperatureScaling,
                                       ekind->tcstat,
                                       doParrinelloRahman,
+                                      useGpuForUpdateAndCpuForLincs, 
                                       ir->nstpcouple * ir->delta_t,
                                       runScheduleWork->stepWork.haveGpuPmeOnThisRank, 
                                       M);
+
+                if(useGpuForUpdateAndCpuForLincs){
+                  // Moves x and xp to the host 
+                  stateGpu->copyCoordinatesFromGpu(state->x, AtomLocality::Local);
+                  // stateGpu->xp holds the necessary constraints, so we need to move them as well 
+                  stateGpu->copyConstraintCoordinatesFromGpu(*(upd.xp()), 
+                                                             AtomLocality::Local);
+                  stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
+                  // constraints coordinates now and only launches LINCS instead of everything
+                  constrain_coordinates(constr,
+                                        do_log,
+                                        do_ene,
+                                        step,
+                                        state,
+                                        upd.xp()->arrayRefWithPadding(),
+                                        &dvdl_constr,
+                                        bCalcVir && !simulationWork.useMts,
+                                        useGpuForUpdateAndCpuForLincs,
+                                        shake_vir);
+                  // Moves updated coordinates back to the device
+                  stateGpu->copyCoordinatesToGpu(state->x, AtomLocality::Local);
+                  stateGpu->consumeCoordinatesCopiedToDeviceEvent(AtomLocality::Local);
+                  // TODO update the virial tensor after coordinates?
+                }
+                
             }
             else
             {
@@ -1598,6 +1626,7 @@ void gmx::LegacySimulator::do_md()
                                           upd.xp()->arrayRefWithPadding(),
                                           &dvdl_constr,
                                           bCalcVir,
+                                          false,
                                           shake_vir);
                 }
 
@@ -1634,6 +1663,7 @@ void gmx::LegacySimulator::do_md()
                                       upd.xp()->arrayRefWithPadding(),
                                       &dvdl_constr,
                                       bCalcVir && !simulationWork.useMts,
+                                      false, 
                                       shake_vir);
                 hipRangePop();
 

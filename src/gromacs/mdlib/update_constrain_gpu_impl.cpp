@@ -81,6 +81,7 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
                                          const bool                        doTemperatureScaling,
                                          gmx::ArrayRef<const t_grp_tcstat> tcstat,
                                          const bool                        doParrinelloRahman,
+                                         const bool                        doLincsOnCpu,
                                          const float                       dtPressureCouple,
                                          const bool                        isPmeRank, 
                                          const matrix                      prVelocityScalingMatrix)
@@ -105,7 +106,10 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
     // d_xp_ -> d_x_ copy after constraints. Note that the integrate saves them in the wrong order as well.
     if (sc_haveGpuConstraintSupport)
     {
-        lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+      
+        // if, for some reason, we cannot offload lincs to the GPU, relies on the host for constrains while still offloading
+        // LeapFrog + Settle. 
+        if (!doLincsOnCpu) lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
         settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
     }
 
@@ -170,6 +174,7 @@ UpdateConstrainGpu::Impl::Impl(const t_inputrec&    ir,
 UpdateConstrainGpu::Impl::~Impl() {}
 
 void UpdateConstrainGpu::Impl::set(DeviceBuffer<Float3>          d_x,
+                                   DeviceBuffer<Float3>          d_xp, 
                                    DeviceBuffer<Float3>          d_v,
                                    const int                     realGridSize, 
                                    DeviceBuffer<real>*           d_grid, 
@@ -184,15 +189,16 @@ void UpdateConstrainGpu::Impl::set(DeviceBuffer<Float3>          d_x,
     GMX_ASSERT(d_v, "Velocities device buffer should not be null.");
     GMX_ASSERT(d_f, "Forces device buffer should not be null.");
 
-    d_x_ = d_x;
-    d_v_ = d_v;
-    d_f_ = d_f;
+    d_x_  = d_x;
+    d_xp_ = d_xp;
+    d_v_  = d_v;
+    d_f_  = d_f;
     realGridSize_ = realGridSize;
     d_grid_ = d_grid;
 
     numAtoms_ = md.nr;
 
-    reallocateDeviceBuffer(&d_xp_, numAtoms_, &numXp_, &numXpAlloc_, deviceContext_);
+    // reallocateDeviceBuffer(&d_xp_, numAtoms_, &numXp_, &numXpAlloc_, deviceContext_);
 
     reallocateDeviceBuffer(
             &d_inverseMasses_, numAtoms_, &numInverseMasses_, &numInverseMassesAlloc_, deviceContext_);
@@ -245,6 +251,7 @@ void UpdateConstrainGpu::integrate(GpuEventSynchronizer*             fReadyOnDev
                                    const bool                        doTemperatureScaling,
                                    gmx::ArrayRef<const t_grp_tcstat> tcstat,
                                    const bool                        doParrinelloRahman,
+                                   const bool                        doLincsOnCpu,
                                    const float                       dtPressureCouple,
                                    const bool                        isPmeRank, 
                                    const matrix                      prVelocityScalingMatrix)
@@ -257,6 +264,7 @@ void UpdateConstrainGpu::integrate(GpuEventSynchronizer*             fReadyOnDev
                      doTemperatureScaling,
                      tcstat,
                      doParrinelloRahman,
+                     doLincsOnCpu,
                      dtPressureCouple,
                      isPmeRank, 
                      prVelocityScalingMatrix);
@@ -273,6 +281,7 @@ void UpdateConstrainGpu::scaleVelocities(const matrix scalingMatrix)
 }
 
 void UpdateConstrainGpu::set(DeviceBuffer<Float3>          d_x,
+                             DeviceBuffer<Float3>          d_xp, 
                              DeviceBuffer<Float3>          d_v,
                              const int                     realGridSize, 
                              DeviceBuffer<real>*           d_grid,
@@ -280,7 +289,7 @@ void UpdateConstrainGpu::set(DeviceBuffer<Float3>          d_x,
                              const InteractionDefinitions& idef,
                              const t_mdatoms&              md)
 {
-    impl_->set(d_x, d_v, realGridSize, d_grid, d_f, idef, md);
+    impl_->set(d_x, d_xp, d_v, realGridSize, d_grid, d_f, idef, md);
 }
 
 void UpdateConstrainGpu::setPbc(const PbcType pbcType, const matrix box)

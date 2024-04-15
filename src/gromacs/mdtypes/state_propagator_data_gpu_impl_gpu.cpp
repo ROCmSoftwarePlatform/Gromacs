@@ -156,7 +156,8 @@ void StatePropagatorDataGpu::Impl::reinit(int numAtomsLocal, int numAtomsAll)
         numAtomsPadded = numAtomsAll_;
     }
 
-    reallocateDeviceBuffer(&d_x_, numAtomsPadded, &d_xSize_, &d_xCapacity_, deviceContext_);
+    reallocateDeviceBuffer(&d_x_,  numAtomsPadded, &d_xSize_, &d_xCapacity_, deviceContext_);
+    reallocateDeviceBuffer(&d_xp_, numAtomsPadded, &d_xSize_, &d_xCapacity_, deviceContext_);
 
     const size_t paddingAllocationSize = numAtomsPadded - numAtomsAll_;
     if (paddingAllocationSize > 0)
@@ -316,6 +317,7 @@ DeviceBuffer<RVec> StatePropagatorDataGpu::Impl::getCoordinates()
     return d_x_;
 }
 
+
 void StatePropagatorDataGpu::Impl::copyCoordinatesToGpu(const gmx::ArrayRef<const gmx::RVec> h_x,
                                                         AtomLocality atomLocality,
                                                         int          expectedConsumptionCount)
@@ -444,6 +446,42 @@ void StatePropagatorDataGpu::Impl::copyCoordinatesFromGpu(gmx::ArrayRef<gmx::RVe
     wallcycle_sub_stop(wcycle_, WallCycleSubCounter::LaunchStatePropagatorData);
     wallcycle_stop(wcycle_, WallCycleCounter::LaunchGpu);
 }
+
+DeviceBuffer<RVec> StatePropagatorDataGpu::Impl::getConstraintCoordinates()
+{
+    return d_xp_;
+}
+
+void StatePropagatorDataGpu::Impl::copyConstraintCoordinatesFromGpu(gmx::ArrayRef<gmx::RVec> h_xp,
+                                                          AtomLocality             atomLocality,
+                                                          GpuEventSynchronizer*    dependency)
+{
+    GMX_ASSERT(atomLocality < AtomLocality::All,
+               formatString("Wrong atom locality. Only Local and NonLocal are allowed for "
+                            "coordinate transfers, passed value is \"%s\"",
+                            enumValueToString(atomLocality))
+                       .c_str());
+    const DeviceStream* deviceStream = xCopyStreams_[atomLocality];
+    GMX_ASSERT(deviceStream != nullptr,
+               "No stream is valid for copying positions with given atom locality.");
+
+    if (dependency != nullptr)
+    {
+        dependency->enqueueWaitEvent(*deviceStream);
+    }
+
+    wallcycle_start_nocount(wcycle_, WallCycleCounter::LaunchGpu);
+    wallcycle_sub_start(wcycle_, WallCycleSubCounter::LaunchStatePropagatorData);
+
+    copyFromDevice(h_xp, d_xp_, d_xSize_, atomLocality, *deviceStream);
+    // Note: unlike copyCoordinatesToGpu this is not used in OpenCL, and the conditional is not needed.
+    hipRangePush("copyCoordinatesFromGPU::markEvent");
+    //xReadyOnHost_[atomLocality].markEvent(*deviceStream);
+    hipRangePop();
+    wallcycle_sub_stop(wcycle_, WallCycleSubCounter::LaunchStatePropagatorData);
+    wallcycle_stop(wcycle_, WallCycleCounter::LaunchGpu);
+}
+
 
 void StatePropagatorDataGpu::Impl::waitCoordinatesReadyOnHost(AtomLocality atomLocality)
 {
@@ -667,6 +705,11 @@ DeviceBuffer<RVec> StatePropagatorDataGpu::getCoordinates()
     return impl_->getCoordinates();
 }
 
+DeviceBuffer<RVec> StatePropagatorDataGpu::getConstraintCoordinates()
+{
+    return impl_->getConstraintCoordinates();
+}
+
 void StatePropagatorDataGpu::copyCoordinatesToGpu(const gmx::ArrayRef<const gmx::RVec> h_x,
                                                   AtomLocality                         atomLocality,
                                                   int expectedConsumptionCount)
@@ -716,6 +759,12 @@ void StatePropagatorDataGpu::copyCoordinatesFromGpu(gmx::ArrayRef<RVec>   h_x,
     return impl_->copyCoordinatesFromGpu(h_x, atomLocality, dependency);
 }
 
+void StatePropagatorDataGpu::copyConstraintCoordinatesFromGpu(gmx::ArrayRef<RVec>   h_xp,
+                                                    AtomLocality          atomLocality,
+                                                    GpuEventSynchronizer* dependency)
+{
+    return impl_->copyConstraintCoordinatesFromGpu(h_xp, atomLocality, dependency);
+}
 void StatePropagatorDataGpu::waitCoordinatesReadyOnHost(AtomLocality atomLocality)
 {
     return impl_->waitCoordinatesReadyOnHost(atomLocality);
