@@ -81,6 +81,7 @@ public:
      * \param[in] numTempScaleValues  Number of temperature scaling groups. Zero for no temperature scaling.
      * \param[in] deviceContext       GPU device context.
      * \param[in] deviceStream        GPU stream to use.
+     * \param[in] doLincsOnCpu        If true, skips LINCS on the GPU and falls back to the CPU later 
      * \param[in] wcycle              The wallclock counter
      */
     UpdateConstrainGpu(const t_inputrec&    ir,
@@ -88,6 +89,7 @@ public:
                        int                  numTempScaleValues,
                        const DeviceContext& deviceContext,
                        const DeviceStream&  deviceStream,
+                       const bool           doLincsOnCpu,
                        gmx_wallcycle*       wcycle);
 
     ~UpdateConstrainGpu();
@@ -107,7 +109,6 @@ public:
      * \param[in]  doTemperatureScaling     If velocities should be scaled for temperature coupling.
      * \param[in]  tcstat                   Temperature coupling data.
      * \param[in]  doParrinelloRahman       If current step is a Parrinello-Rahman pressure coupling step.
-     * \param[in]  doLincsOnCpu             If constraints should be solved by the Cpu.
      * \param[in]  dtPressureCouple         Period between pressure coupling steps.
      * \param[in]  prVelocityScalingMatrix  Parrinello-Rahman velocity scaling matrix.
      */
@@ -120,7 +121,6 @@ public:
                    bool                              doTemperatureScaling,
                    gmx::ArrayRef<const t_grp_tcstat> tcstat,
                    bool                              doParrinelloRahman,
-                   bool                              doLincsOnCpu,
                    float                             dtPressureCouple,
                    bool                              isPmeRank, 
                    const matrix                      prVelocityScalingMatrix);

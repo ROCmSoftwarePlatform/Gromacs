@@ -1532,6 +1532,7 @@ void Update::Impl::update_sd_second_half(const t_inputrec&                 input
         bool computeVirial = false;
         constr->apply(do_log,
                       do_ene,
+                      false,
                       step,
                       1,
                       0.5,

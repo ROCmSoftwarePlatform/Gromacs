@@ -123,6 +123,7 @@ public:
                         gmx::ArrayRef<const unsigned short> cFREEZE);
     bool apply(bool                      bLog,
                bool                      bEner,
+               bool                      bDoOnlyLincs,
                int64_t                   step,
                int                       delta_step,
                real                      step_scaling,
@@ -360,6 +361,7 @@ static void dump_confs(FILE*                log,
 
 bool Constraints::apply(bool                      bLog,
                         bool                      bEner,
+                        bool                      bDoOnlyLincs,
                         int64_t                   step,
                         int                       delta_step,
                         real                      step_scaling,
@@ -376,6 +378,7 @@ bool Constraints::apply(bool                      bLog,
 {
     return impl_->apply(bLog,
                         bEner,
+                        bDoOnlyLincs,
                         step,
                         delta_step,
                         step_scaling,
@@ -393,6 +396,7 @@ bool Constraints::apply(bool                      bLog,
 
 bool Constraints::Impl::apply(bool                      bLog,
                               bool                      bEner,
+                              bool                      bDoOnlyLincs,
                               int64_t                   step,
                               int                       delta_step,
                               real                      step_scaling,
@@ -547,7 +551,7 @@ bool Constraints::Impl::apply(bool                      bLog,
         }
     }
 
-    if (shaked != nullptr)
+    if (shaked != nullptr && !bDoOnlyLincs)
     {
         bOK = constrain_shake(log,
                               shaked.get(),
@@ -581,7 +585,7 @@ bool Constraints::Impl::apply(bool                      bLog,
         }
     }
 
-    if (nsettle > 0)
+    if (nsettle > 0 && !bDoOnlyLincs)
     {
         bool bSettleErrorHasOccurred0 = false;
 
@@ -1296,12 +1300,14 @@ void do_constrain_first(FILE*                     fplog,
     }
     dvdl_dum = 0;
 
-    bool needsLogging  = true;
-    bool computeEnergy = false;
-    bool computeVirial = false;
+    bool needsLogging     = true;
+    bool computeEnergy    = false;
+    bool computeVirial    = false;
+    bool computeOnlyLincs = false;
     /* constrain the current position */
     constr->apply(needsLogging,
                   computeEnergy,
+                  computeOnlyLincs,
                   step,
                   0,
                   1.0,
@@ -1321,6 +1327,7 @@ void do_constrain_first(FILE*                     fplog,
         /* also may be useful if we need the ekin from the halfstep for velocity verlet */
         constr->apply(needsLogging,
                       computeEnergy,
+                      computeOnlyLincs,
                       step,
                       0,
                       1.0,
@@ -1361,6 +1368,7 @@ void do_constrain_first(FILE*                     fplog,
         dvdl_dum = 0;
         constr->apply(needsLogging,
                       computeEnergy,
+                      computeOnlyLincs,
                       step,
                       -1,
                       1.0,
@@ -1399,6 +1407,7 @@ void constrain_velocities(gmx::Constraints* constr,
     {
         constr->apply(do_log,
                       do_ene,
+                      false,
                       step,
                       1,
                       1.0,
@@ -1418,18 +1427,19 @@ void constrain_velocities(gmx::Constraints* constr,
 void constrain_coordinates(gmx::Constraints*         constr,
                            bool                      do_log,
                            bool                      do_ene,
+                           bool                      do_only_lincs,
                            int64_t                   step,
                            t_state*                  state,
                            ArrayRefWithPadding<RVec> xp,
                            real*                     dvdlambda,
                            gmx_bool                  computeVirial,
-                           gmx_bool                  doOnlyLincs, 
                            tensor                    constraintsVirial)
 {
     if (constr != nullptr)
     {
         constr->apply(do_log,
                       do_ene,
+                      do_only_lincs,
                       step,
                       1,
                       1.0,

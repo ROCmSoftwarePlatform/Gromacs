@@ -491,9 +491,11 @@ static void init_em(FILE*                fplog,
             bool needsLogging  = true;
             bool computeEnergy = true;
             bool computeVirial = false;
+            bool computeOnlyLincs = false;
             dvdl_constr        = 0;
             constr->apply(needsLogging,
                           computeEnergy,
+                          computeOnlyLincs,
                           -1,
                           0,
                           1.0,
@@ -747,6 +749,7 @@ static bool do_em_step(const t_commrec*                          cr,
         dvdl_constr = 0;
         validStep   = constr->apply(TRUE,
                                   TRUE,
+                                  FALSE,
                                   count,
                                   0,
                                   1.0,
@@ -1086,10 +1089,12 @@ void EnergyEvaluator::run(em_state_t* ems, rvec mu_tot, tensor vir, tensor pres,
         bool needsLogging  = false;
         bool computeEnergy = false;
         bool computeVirial = true;
+        bool computeOnlyLincs = false;
         dvdl_constr        = 0;
         auto f             = ems->f.view().forceWithPadding();
         constr->apply(needsLogging,
                       computeEnergy,
+                      computeOnlyLincs,
                       count,
                       0,
                       1.0,

@@ -81,7 +81,6 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
                                          const bool                        doTemperatureScaling,
                                          gmx::ArrayRef<const t_grp_tcstat> tcstat,
                                          const bool                        doParrinelloRahman,
-                                         const bool                        doLincsOnCpu,
                                          const float                       dtPressureCouple,
                                          const bool                        isPmeRank, 
                                          const matrix                      prVelocityScalingMatrix)
@@ -109,7 +108,7 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
       
         // if, for some reason, we cannot offload lincs to the GPU, relies on the host for constrains while still offloading
         // LeapFrog + Settle. 
-        if (!doLincsOnCpu) lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+        if (!doLincsOnCpu_) lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
         settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
     }
 
@@ -160,13 +159,14 @@ UpdateConstrainGpu::Impl::Impl(const t_inputrec&    ir,
                                const int            numTempScaleValues,
                                const DeviceContext& deviceContext,
                                const DeviceStream&  deviceStream,
+                               const bool           doLincsOnCpu,
                                gmx_wallcycle*       wcycle) :
-    deviceContext_(deviceContext), deviceStream_(deviceStream), wcycle_(wcycle)
+    deviceContext_(deviceContext), deviceStream_(deviceStream), wcycle_(wcycle), doLincsOnCpu_(doLincsOnCpu)
 {
     integrator_ = std::make_unique<LeapFrogGpu>(deviceContext_, deviceStream_, numTempScaleValues);
     if (sc_haveGpuConstraintSupport)
     {
-        lincsGpu_ = std::make_unique<LincsGpu>(ir.nLincsIter, ir.nProjOrder, deviceContext_, deviceStream_);
+        if (!doLincsOnCpu_) lincsGpu_ = std::make_unique<LincsGpu>(ir.nLincsIter, ir.nProjOrder, deviceContext_, deviceStream_);
         settleGpu_ = std::make_unique<SettleGpu>(mtop, deviceContext_, deviceStream_);
     }
 }
@@ -207,7 +207,7 @@ void UpdateConstrainGpu::Impl::set(DeviceBuffer<Float3>          d_x,
     integrator_->set(numAtoms_, md.invmass, md.cTC);
     if (sc_haveGpuConstraintSupport)
     {
-        lincsGpu_->set(idef, numAtoms_, md.invmass);
+        if (!doLincsOnCpu_) lincsGpu_->set(idef, numAtoms_, md.invmass);
         settleGpu_->set(idef);
     }
     else
@@ -236,8 +236,9 @@ UpdateConstrainGpu::UpdateConstrainGpu(const t_inputrec&    ir,
                                        const int            numTempScaleValues,
                                        const DeviceContext& deviceContext,
                                        const DeviceStream&  deviceStream,
+                                       const bool           doLincsOnCpu,
                                        gmx_wallcycle*       wcycle) :
-    impl_(new Impl(ir, mtop, numTempScaleValues, deviceContext, deviceStream, wcycle))
+    impl_(new Impl(ir, mtop, numTempScaleValues, deviceContext, deviceStream, doLincsOnCpu, wcycle))
 {
 }
 
@@ -251,7 +252,6 @@ void UpdateConstrainGpu::integrate(GpuEventSynchronizer*             fReadyOnDev
                                    const bool                        doTemperatureScaling,
                                    gmx::ArrayRef<const t_grp_tcstat> tcstat,
                                    const bool                        doParrinelloRahman,
-                                   const bool                        doLincsOnCpu,
                                    const float                       dtPressureCouple,
                                    const bool                        isPmeRank, 
                                    const matrix                      prVelocityScalingMatrix)
@@ -264,7 +264,6 @@ void UpdateConstrainGpu::integrate(GpuEventSynchronizer*             fReadyOnDev
                      doTemperatureScaling,
                      tcstat,
                      doParrinelloRahman,
-                     doLincsOnCpu,
                      dtPressureCouple,
                      isPmeRank, 
                      prVelocityScalingMatrix);

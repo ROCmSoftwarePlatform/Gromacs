@@ -482,6 +482,7 @@ void gmx::LegacySimulator::do_md()
                 ekind->ngtc,
                 fr->deviceStreamManager->context(),
                 fr->deviceStreamManager->stream(gmx::DeviceStreamType::UpdateAndConstraints),
+                useGpuForUpdateAndCpuForLincs,
                 wcycle);
 
         stateGpu->setXUpdatedOnDeviceEvent(integrator->xUpdatedOnDeviceEvent());
@@ -1569,7 +1570,6 @@ void gmx::LegacySimulator::do_md()
                                       doTemperatureScaling,
                                       ekind->tcstat,
                                       doParrinelloRahman,
-                                      useGpuForUpdateAndCpuForLincs, 
                                       ir->nstpcouple * ir->delta_t,
                                       runScheduleWork->stepWork.haveGpuPmeOnThisRank, 
                                       M);
@@ -1585,12 +1585,12 @@ void gmx::LegacySimulator::do_md()
                   constrain_coordinates(constr,
                                         do_log,
                                         do_ene,
+                                        useGpuForUpdateAndCpuForLincs,
                                         step,
                                         state,
                                         upd.xp()->arrayRefWithPadding(),
                                         &dvdl_constr,
                                         bCalcVir && !simulationWork.useMts,
-                                        useGpuForUpdateAndCpuForLincs,
                                         shake_vir);
                   // Moves updated coordinates back to the device
                   stateGpu->copyCoordinatesToGpu(state->x, AtomLocality::Local);
@@ -1621,12 +1621,12 @@ void gmx::LegacySimulator::do_md()
                     constrain_coordinates(constr,
                                           do_log,
                                           do_ene,
+                                          false,
                                           step,
                                           state,
                                           upd.xp()->arrayRefWithPadding(),
                                           &dvdl_constr,
                                           bCalcVir,
-                                          false,
                                           shake_vir);
                 }
 
@@ -1658,12 +1658,12 @@ void gmx::LegacySimulator::do_md()
                 constrain_coordinates(constr,
                                       do_log,
                                       do_ene,
+                                      false,
                                       step,
                                       state,
                                       upd.xp()->arrayRefWithPadding(),
                                       &dvdl_constr,
                                       bCalcVir && !simulationWork.useMts,
-                                      false, 
                                       shake_vir);
                 hipRangePop();
 

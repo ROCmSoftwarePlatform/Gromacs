@@ -179,6 +179,7 @@ public:
      */
     bool apply(bool                      bLog,
                bool                      bEner,
+               bool                      bDoOnlyLincs,
                int64_t                   step,
                int                       delta_step,
                real                      step_scaling,
@@ -335,12 +336,12 @@ void constrain_velocities(gmx::Constraints* constr,
 void constrain_coordinates(gmx::Constraints*         constr,
                            bool                      do_log,
                            bool                      do_ene,
+                           bool                      do_only_lincs,
                            int64_t                   step,
                            t_state*                  state,
                            ArrayRefWithPadding<RVec> xp,
                            real*                     dvdlambda,
                            bool                      computeVirial,
-                           bool                      doLincsOnGpu,
                            tensor                    constraintsVirial);
 
 } // namespace gmx

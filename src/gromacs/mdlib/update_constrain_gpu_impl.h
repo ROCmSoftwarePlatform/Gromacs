@@ -79,6 +79,7 @@ public:
      * \param[in] numTempScaleValues  Number of temperature scaling groups. Set zero for no temperature coupling.
      * \param[in] deviceContext       GPU device context.
      * \param[in] deviceStream        GPU stream to use.
+     * \param[in]  doLincsOnCpu       If constraints should be solved by the Cpu.
      * \param[in] wcycle              The wallclock counter
      */
     Impl(const t_inputrec&    ir,
@@ -86,6 +87,7 @@ public:
          int                  numTempScaleValues,
          const DeviceContext& deviceContext,
          const DeviceStream&  deviceStream,
+         const bool           doLincsOnCpu,
          gmx_wallcycle*       wcycle);
 
     ~Impl();
@@ -109,7 +111,6 @@ public:
      * \param[in]  doTemperatureScaling     If velocities should be scaled for temperature coupling.
      * \param[in]  tcstat                   Temperature coupling data.
      * \param[in]  doParrinelloRahman       If current step is a Parrinello-Rahman pressure coupling step.
-     * \param[in]  doLincsOnCpu             If constraints should be solved by the Cpu.
      * \param[in]  dtPressureCouple         Period between pressure coupling steps.
      * \param[in]  prVelocityScalingMatrix  Parrinello-Rahman velocity scaling matrix.
      */
@@ -121,7 +122,6 @@ public:
                    bool                              doTemperatureScaling,
                    gmx::ArrayRef<const t_grp_tcstat> tcstat,
                    bool                              doParrinelloRahman,
-                   bool                              doLincsOnCpu,
                    float                             dtPressureCouple,
                    const bool                        isPmeRank, 
                    const matrix                      prVelocityScalingMatrix);
@@ -189,6 +189,9 @@ private:
     const DeviceStream& deviceStream_;
     //! GPU kernel launch config
     KernelLaunchConfig coordinateScalingKernelLaunchConfig_;
+
+    //! If Lincs should be done by the CPU instead
+    const bool doLincsOnCpu_;
 
     //! Periodic boundary data
     PbcAiuc pbcAiuc_;

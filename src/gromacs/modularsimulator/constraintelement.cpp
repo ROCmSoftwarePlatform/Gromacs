@@ -168,6 +168,7 @@ void ConstraintsElement<variable>::apply(Step step, bool calculateVirial, bool w
 
     constr_->apply(writeLog,
                    writeEnergy,
+                   false,
                    step,
                    1,
                    1.0,
