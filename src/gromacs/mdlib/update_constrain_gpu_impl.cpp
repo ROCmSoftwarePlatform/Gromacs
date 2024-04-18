@@ -185,9 +185,10 @@ void UpdateConstrainGpu::Impl::set(DeviceBuffer<Float3>          d_x,
     wallcycle_start_nocount(wcycle_, WallCycleCounter::LaunchGpu);
     wallcycle_sub_start(wcycle_, WallCycleSubCounter::LaunchGpuUpdateConstrain);
 
-    GMX_ASSERT(d_x, "Coordinates device buffer should not be null.");
-    GMX_ASSERT(d_v, "Velocities device buffer should not be null.");
-    GMX_ASSERT(d_f, "Forces device buffer should not be null.");
+    GMX_ASSERT(d_x,  "Coordinates device buffer should not be null.");
+    GMX_ASSERT(d_xp, "Constraint Coordinates device buffer should not be null.");
+    GMX_ASSERT(d_v,  "Velocities device buffer should not be null.");
+    GMX_ASSERT(d_f,  "Forces device buffer should not be null.");
 
     d_x_  = d_x;
     d_xp_ = d_xp;

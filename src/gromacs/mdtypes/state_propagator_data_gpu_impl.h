@@ -432,6 +432,11 @@ private:
     int d_xSize_ = -1;
     //! Allocation size for the positions buffer
     int d_xCapacity_ = -1;
+
+    //! Number of particles saved in the constraint position buffer
+    int d_xpSize_ = -1;
+    //! Allocation size for the constraint position buffer
+    int d_xpCapacity_ =-1;
     
     //! Device velocities buffer
     DeviceBuffer<RVec> d_v_;

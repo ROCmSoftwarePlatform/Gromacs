@@ -157,7 +157,7 @@ void StatePropagatorDataGpu::Impl::reinit(int numAtomsLocal, int numAtomsAll)
     }
 
     reallocateDeviceBuffer(&d_x_,  numAtomsPadded, &d_xSize_, &d_xCapacity_, deviceContext_);
-    reallocateDeviceBuffer(&d_xp_, numAtomsPadded, &d_xSize_, &d_xCapacity_, deviceContext_);
+    reallocateDeviceBuffer(&d_xp_, numAtomsPadded, &d_xpSize_, &d_xpCapacity_, deviceContext_);
 
     const size_t paddingAllocationSize = numAtomsPadded - numAtomsAll_;
     if (paddingAllocationSize > 0)
