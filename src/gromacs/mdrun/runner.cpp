@@ -1328,9 +1328,11 @@ int Mdrunner::mdrunner()
                                                          doRerun,
                                                          devFlags,
                                                          mdlog);
-        useGpuForUpdateAndCpuForLincs = decideWhetherToFallBackToCpuForLincs(useGpuForUpdate,
-                                                                             mtop,
-                                                                             mdlog);
+        useGpuForUpdateAndCpuForLincs = 
+            decideWhetherToFallBackToCpuForLincs(useGpuForUpdate,
+                                                 updateGroups.useUpdateGroups(),
+                                                 mtop,
+                                                 mdlog);
     }
     GMX_CATCH_ALL_AND_EXIT_WITH_FATAL_ERROR
 

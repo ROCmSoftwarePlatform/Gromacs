@@ -342,14 +342,16 @@ bool decideWhetherToUseGpuForHalo(bool havePPDomainDecomposition,
 /*! \brief Decide whether to fall back to the CPU for LINCS when doing GPU Update.
  *
  * \param[in]  useGpuForUpdate              Whether GPUs will be used for update.
+ * \param[in]  useUpdateGroups              If the constraints can be split across domains.
  * \param[in]  mtop                         The global topology.
  * \param[in]  mdlog                        MD logger.
  *
  * \returns    Whether to fall back to the CPU for LINCS when doing the CPU update
  */
-bool decideWhetherToFallBackToCpuForLincs(const bool                     useGpuForUpdate,
-                                          const gmx_mtop_t&              mtop,
-                                          const gmx::MDLogger&           mdlog);
+bool decideWhetherToFallBackToCpuForLincs(const bool           useGpuForUpdate,
+                                          const bool           useUpdateGroups,           
+                                          const gmx_mtop_t&    mtop,
+                                          const gmx::MDLogger& mdlog);
 
 } // namespace gmx
 

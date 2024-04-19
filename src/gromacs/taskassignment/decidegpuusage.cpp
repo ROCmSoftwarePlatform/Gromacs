@@ -607,19 +607,20 @@ bool decideWhetherToUseGpuForUpdate(const bool                     isDomainDecom
 
     std::string errorMessage;
 
+#if 0
     if (isDomainDecomposition)
     {
-        if (hasAnyConstraints && !useUpdateGroups)
-        {
+         if (hasAnyConstraints && !useUpdateGroups)
+         {
             errorMessage +=
                     "Domain decomposition is only supported with constraints when update "
                     "groups "
                     "are used. This means constraining all bonds is not supported, except for "
                     "small molecules, and box sizes close to half the pair-list cutoff are not "
                     "supported.\n ";
-        }
+         }
     }
-
+#endif
     if (havePmeOnlyRank)
     {
         if (pmeSpreadGatherUsesCpu)
@@ -804,24 +805,38 @@ bool decideWhetherToUseGpuForHalo(bool havePPDomainDecomposition,
 }
 
 bool decideWhetherToFallBackToCpuForLincs(const bool                     useGpuForUpdate,
+                                          const bool                     useUpdateGroups,
                                           const gmx_mtop_t&              mtop,
                                           const gmx::MDLogger&           mdlog)
 {
-    //  TODO - add another flag here to check
-    if (useGpuForUpdate && !UpdateConstrainGpu::isNumCoupledConstraintsSupported(mtop))
+    std::string warnMessage;
+    bool fallBack = false;
+    const bool hasAnyConstraints      = gmx_mtop_interaction_count(mtop, IF_CONSTRAINT) > 0;
+    if (useGpuForUpdate)
     {
-      // If the number of coupled constraints is higher than 1024, and we can still 
-      // benefit from update + settle on the GPU, we fall back to the host for LINCS
-      // and only it
-      GMX_LOG(mdlog.warning)
-                   .asParagraph()
-                   .appendText(
-                            "Update is requested on the GPU, but the number of coupled constrains" 
-                            "is higher than than the maximum supported by the GPU implementation of LINCS."
-                            "Will use the CPU version of LINCS.");
-      return true;
-    } else return false;
+      if(!UpdateConstrainGpu::isNumCoupledConstraintsSupported(mtop))
+      {
+        warnMessage += 
+                    "Update is requested on the GPU, but the number of coupled constrains "  
+                    "is higher than than the maximum supported by the GPU implementation of "
+                    "LINCS.\n";
+        fallBack = true;
+      }
+      if(hasAnyConstraints && !useUpdateGroups)
+      {
+        warnMessage += 
+                    "Domain decomposition is only supported with constraints when update "
+                    "groups "
+                    "are used. This means constraining all bonds is not supported, except for "
+                    "small molecules, and box sizes close to half the pair-list cutoff are not "
+                    "supported.\n ";
+        fallBack = true;
+      }
+      if(!warnMessage.empty())
+      {
+        GMX_LOG(mdlog.warning).asParagraph().appendText(warnMessage.c_str());
+      }
+    }
+    return fallBack;
 }
-
-
 } // namespace gmx

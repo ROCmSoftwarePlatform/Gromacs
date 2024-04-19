@@ -425,10 +425,10 @@ void gmx::LegacySimulator::do_md()
     // TODO: the assertions below should be handled by UpdateConstraintsBuilder.
     if (useGpuForUpdate)
     {
-        GMX_RELEASE_ASSERT(!haveDDAtomOrdering(*cr) || ddUsesUpdateGroups(*cr->dd)
-                                   || constr == nullptr || constr->numConstraintsTotal() == 0,
-                           "Constraints in domain decomposition are only supported with update "
-                           "groups if using GPU update.\n");
+        // GMX_RELEASE_ASSERT(!haveDDAtomOrdering(*cr) || ddUsesUpdateGroups(*cr->dd)
+        //                          || constr == nullptr || constr->numConstraintsTotal() == 0,
+        //                   "Constraints in domain decomposition are only supported with update "
+        //                   "groups if using GPU update.\n");
         GMX_RELEASE_ASSERT(ir->eConstrAlg != ConstraintAlgorithm::Shake || constr == nullptr
                                    || constr->numConstraintsTotal() == 0,
                            "SHAKE is not supported with GPU update.");
