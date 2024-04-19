@@ -113,13 +113,16 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
     }
 
     // scaledVirial -> virial (methods above returns scaled values)
-    float scaleFactor = 0.5F / (dt * dt);
-    for (int i = 0; i < DIM; i++)
+    if (!doLincsOnCpu_) 
     {
-        for (int j = 0; j < DIM; j++)
-        {
-            virial[i][j] = scaleFactor * virial[i][j];
-        }
+      float scaleFactor = 0.5F / (dt * dt);
+      for (int i = 0; i < DIM; i++)
+      {
+          for (int j = 0; j < DIM; j++)
+          {
+              virial[i][j] = scaleFactor * virial[i][j];
+          }
+      }
     }
 
     xUpdatedOnDeviceEvent_.markEvent(deviceStream_);

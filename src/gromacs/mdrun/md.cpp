@@ -1576,9 +1576,9 @@ void gmx::LegacySimulator::do_md()
 
                 if(useGpuForUpdateAndCpuForLincs){
                   // Moves x and xp to the host 
-                  stateGpu->copyCoordinatesFromGpu(state->x, AtomLocality::Local);
-                  // stateGpu->xp holds the necessary constraints, so we need to move them as well 
-                  stateGpu->copyConstraintCoordinatesFromGpu(*(upd.xp()), 
+                  stateGpu->copyCoordinatesFromGpu(*(upd.xp()), AtomLocality::Local);
+                  stateGpu->copyVelocitiesFromGpu(state->v, AtomLocality::Local);
+                  stateGpu->copyConstraintCoordinatesFromGpu(state->x, 
                                                              AtomLocality::Local);
                   stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
                   // constraints coordinates now and only launches LINCS instead of everything
@@ -1593,8 +1593,10 @@ void gmx::LegacySimulator::do_md()
                                         bCalcVir && !simulationWork.useMts,
                                         shake_vir);
                   // Moves updated coordinates back to the device
-                  stateGpu->copyCoordinatesToGpu(state->x, AtomLocality::Local);
-                  stateGpu->consumeCoordinatesCopiedToDeviceEvent(AtomLocality::Local);
+                  enerd->term[F_DVDL_CONSTR] += dvdl_constr;
+                  stateGpu->copyCoordinatesToGpu(*(upd.xp()), AtomLocality::Local);
+                  stateGpu->copyVelocitiesToGpu(state->v, AtomLocality::Local);
+                  stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
                   // TODO update the virial tensor after coordinates?
                 }
                 

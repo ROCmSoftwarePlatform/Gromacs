@@ -458,7 +458,7 @@ bool Constraints::Impl::apply(bool                      bLog,
 
     if (computeVirial)
     {
-        clear_mat(constraintsVirial);
+        if (!bDoOnlyLincs) clear_mat(constraintsVirial);
     }
     const InteractionList& settle = idef->il[F_SETTLE];
     nsettle                       = settle.size() / (1 + NRAL(F_SETTLE));
