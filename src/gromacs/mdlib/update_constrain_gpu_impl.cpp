@@ -109,7 +109,7 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
         // if, for some reason, we cannot offload lincs to the GPU, relies on the host for constrains while still offloading
         // LeapFrog + Settle. 
         if (!doLincsOnCpu_) lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
-        settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+        if (!doLincsOnCpu_) settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
     }
 
     // scaledVirial -> virial (methods above returns scaled values)
