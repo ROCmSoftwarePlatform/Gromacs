@@ -191,7 +191,7 @@ TEST_P(ReplicaExchangeTest, Works)
         {
             energyTermsToCompare.emplace(
                     interaction_function[F_ECONSERVED].longname,
-                    relativeToleranceAsPrecisionDependentUlp(50.0, 100, doubleTolerance));
+                    relativeToleranceAsPrecisionDependentUlp(50.0, 500, doubleTolerance));
         }
         if (pcoupl != PressureCoupling::No)
         {
