@@ -1561,6 +1561,8 @@ void gmx::LegacySimulator::do_md()
                  * on the GPU and calls LINCS on the CPU afterwards  
                  */
 
+		
+
                 integrator->integrate(stateGpu->getLocalForcesReadyOnDeviceEvent(
                                               runScheduleWork->stepWork, runScheduleWork->simulationWork),
                                       ir->delta_t,
@@ -1592,9 +1594,11 @@ void gmx::LegacySimulator::do_md()
                                         &dvdl_constr,
                                         bCalcVir && !simulationWork.useMts,
                                         shake_vir);
+                  upd.finish_update(
+                        *ir, md->havePartiallyFrozenAtoms, md->homenr, state, wcycle, constr != nullptr);
                   // Moves updated coordinates back to the device
                   enerd->term[F_DVDL_CONSTR] += dvdl_constr;
-                  stateGpu->copyCoordinatesToGpu(*(upd.xp()), AtomLocality::Local);
+                  stateGpu->copyCoordinatesToGpu(state->x, AtomLocality::Local);
                   stateGpu->copyVelocitiesToGpu(state->v, AtomLocality::Local);
                   stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
                   // TODO update the virial tensor after coordinates?
@@ -1771,6 +1775,7 @@ void gmx::LegacySimulator::do_md()
                                 step,
                                 &observablesReducer);
                 hipRangePop();
+
                 if (!EI_VV(ir->eI) && bStopCM)
                 {
                     process_and_stopcm_grp(
