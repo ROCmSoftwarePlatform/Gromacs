@@ -1562,7 +1562,6 @@ void gmx::LegacySimulator::do_md()
                  */
 
 		
-
                 integrator->integrate(stateGpu->getLocalForcesReadyOnDeviceEvent(
                                               runScheduleWork->stepWork, runScheduleWork->simulationWork),
                                       ir->delta_t,
@@ -1577,11 +1576,18 @@ void gmx::LegacySimulator::do_md()
                                       M);
 
                 if(useGpuForUpdateAndCpuForLincs){
-                  // Moves x and xp to the host 
+                  // Calls settle on CPUs for waters
+                  integrator->settle(ir->delta_t,
+                                     true, 
+                                     bCalcVir,
+                                     shake_vir);
+                                     
+                  // Moves x and xp to the host for LINCS
                   stateGpu->copyCoordinatesFromGpu(*(upd.xp()), AtomLocality::Local);
                   stateGpu->copyVelocitiesFromGpu(state->v, AtomLocality::Local);
                   stateGpu->copyConstraintCoordinatesFromGpu(state->x, 
                                                              AtomLocality::Local);
+                  // on hip, synchronizes stream instead of waiting for event;
                   stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
                   // constraints coordinates now and only launches LINCS instead of everything
                   constrain_coordinates(constr,
@@ -1601,7 +1607,6 @@ void gmx::LegacySimulator::do_md()
                   stateGpu->copyCoordinatesToGpu(state->x, AtomLocality::Local);
                   stateGpu->copyVelocitiesToGpu(state->v, AtomLocality::Local);
                   stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
-                  // TODO update the virial tensor after coordinates?
                 }
                 
             }

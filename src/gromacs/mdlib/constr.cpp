@@ -585,7 +585,7 @@ bool Constraints::Impl::apply(bool                      bLog,
         }
     }
 
-    if (nsettle > 0)
+    if (nsettle > 0 && !bDoOnlyLincs)
     {
         bool bSettleErrorHasOccurred0 = false;
 

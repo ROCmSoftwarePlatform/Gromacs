@@ -607,7 +607,7 @@ bool decideWhetherToUseGpuForUpdate(const bool                     isDomainDecom
 
     std::string errorMessage;
 
-#if 0
+#if 1
     if (isDomainDecomposition)
     {
          if (hasAnyConstraints && !useUpdateGroups)

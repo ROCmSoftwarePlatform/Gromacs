@@ -108,8 +108,10 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
       
         // if, for some reason, we cannot offload lincs to the GPU, relies on the host for constrains while still offloading
         // LeapFrog + Settle. 
-        if (!doLincsOnCpu_) lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
-        if (!doLincsOnCpu_) settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+        if (!doLincsOnCpu_){
+            lincsGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+            settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+        }
     }
 
     // scaledVirial -> virial (methods above returns scaled values)
@@ -123,13 +125,33 @@ void UpdateConstrainGpu::Impl::integrate(GpuEventSynchronizer*             fRead
               virial[i][j] = scaleFactor * virial[i][j];
           }
       }
+      xUpdatedOnDeviceEvent_.markEvent(deviceStream_);
+      wallcycle_sub_stop(wcycle_, WallCycleSubCounter::LaunchGpuUpdateConstrain);
+      wallcycle_stop(wcycle_, WallCycleCounter::LaunchGpu);
     }
+}
 
+void UpdateConstrainGpu::Impl::settle(const real dt,
+                                      const bool updateVelocities,
+                                      const bool computeVirial, 
+                                      tensor virial)
+{
+    GMX_ASSERT(sc_haveGpuConstraintSupport, "SETTLE not supported on GPUs");
+    settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
+
+    float scaleFactor = 0.5f / (dt * dt);
+    for(int i = 0; i < DIM; i++)
+    {
+        for (int j = 0; j < DIM; j++)
+        {
+            virial[i][j] = scaleFactor * virial[i][j];
+        }
+    }
     xUpdatedOnDeviceEvent_.markEvent(deviceStream_);
-
     wallcycle_sub_stop(wcycle_, WallCycleSubCounter::LaunchGpuUpdateConstrain);
     wallcycle_stop(wcycle_, WallCycleCounter::LaunchGpu);
 }
+                                          
 
 void UpdateConstrainGpu::Impl::scaleCoordinates(const matrix scalingMatrix)
 {
@@ -271,6 +293,14 @@ void UpdateConstrainGpu::integrate(GpuEventSynchronizer*             fReadyOnDev
                      dtPressureCouple,
                      isPmeRank, 
                      prVelocityScalingMatrix);
+}
+
+void UpdateConstrainGpu::settle(const real dt,
+                                 const bool updateVelocities,
+                                 const bool computeVirial, 
+                                 tensor virial)
+{
+    impl_->settle(dt, updateVelocities, computeVirial, virial);
 }
 
 void UpdateConstrainGpu::scaleCoordinates(const matrix scalingMatrix)

@@ -126,6 +126,20 @@ public:
                    const bool                        isPmeRank, 
                    const matrix                      prVelocityScalingMatrix);
 
+    /*! \brief settle 
+     *
+     * This will apply the SETTLE method to calculate water constraints
+     * \param[in]  dt                       Timestep.
+     * \param[in]  updateVelocities         If the velocities should be constrained.
+     * \param[in]  computeVirial            If virial should be updated.
+     * \param[out] virial                   Place to save virial tensor.
+     */
+
+    void settle(const real dt,
+                const bool updateVelocities,
+                const bool computeVirial,
+                tensor     virial);
+
     /*! \brief Scale coordinates on the GPU for the pressure coupling.
      *
      * After pressure coupling step, the box size may change. Hence, the coordinates should be
