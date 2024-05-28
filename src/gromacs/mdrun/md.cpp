@@ -1576,13 +1576,16 @@ void gmx::LegacySimulator::do_md()
                                       M);
 
                 if(useGpuForUpdateAndCpuForLincs){
-                  // Calls settle on CPUs for waters
+                  // Calls settle on the GPUs 
                   integrator->settle(ir->delta_t,
                                      true, 
                                      bCalcVir,
                                      shake_vir);
                                      
                   // Moves x and xp to the host for LINCS
+                  // Here we move stateGpu->X to upd.xp and stateGpu->xp to X;
+                  // afterwards, constrain_coordinates updates upd.xp
+                  // finish_update copies upd.xp to state->x;
                   stateGpu->copyCoordinatesFromGpu(*(upd.xp()), AtomLocality::Local);
                   stateGpu->copyVelocitiesFromGpu(state->v, AtomLocality::Local);
                   stateGpu->copyConstraintCoordinatesFromGpu(state->x, 

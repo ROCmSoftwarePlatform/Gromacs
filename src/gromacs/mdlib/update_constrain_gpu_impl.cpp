@@ -139,14 +139,6 @@ void UpdateConstrainGpu::Impl::settle(const real dt,
     GMX_ASSERT(sc_haveGpuConstraintSupport, "SETTLE not supported on GPUs");
     settleGpu_->apply(d_xp_, d_x_, updateVelocities, d_v_, 1.0 / dt, computeVirial, virial, pbcAiuc_);
 
-    float scaleFactor = 0.5f / (dt * dt);
-    for(int i = 0; i < DIM; i++)
-    {
-        for (int j = 0; j < DIM; j++)
-        {
-            virial[i][j] = scaleFactor * virial[i][j];
-        }
-    }
     xUpdatedOnDeviceEvent_.markEvent(deviceStream_);
     wallcycle_sub_stop(wcycle_, WallCycleSubCounter::LaunchGpuUpdateConstrain);
     wallcycle_stop(wcycle_, WallCycleCounter::LaunchGpu);
