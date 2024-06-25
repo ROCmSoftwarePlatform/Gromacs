@@ -51,6 +51,8 @@
 #include <algorithm>
 #include <memory>
 #include <numeric>
+#include <chrono>
+#include <iostream>
 
 #include "gromacs/applied_forces/awh/awh.h"
 #include "gromacs/applied_forces/awh/read_params.h"
@@ -849,6 +851,7 @@ void gmx::LegacySimulator::do_md()
     {
 
         /* Determine if this is a neighbor search step */
+        auto c_start = std::chrono::high_resolution_clock::now();
         bNStList = (ir->nstlist > 0 && step % ir->nstlist == 0);
 
         if (bPMETune && bNStList)
@@ -2046,6 +2049,12 @@ void gmx::LegacySimulator::do_md()
         step++;
         step_rel++;
         observablesReducer.markAsReadyToReduce();
+        
+        // print time interval for debug
+        auto c_end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(c_end-c_start);
+
+        std::cout << " time interval on timestep  " << step -1 << ": " << duration.count() << " seconds" << std::endl;
 
 #if GMX_FAHCORE
         if (MASTER(cr))
