@@ -164,19 +164,19 @@ void GpuHaloExchange::Impl::reinitHalo(float3* d_coordinatesBuffer, float3* d_fo
         numZoneTemp += numZoneTemp;
     }
 
-    int newSize = ind.nsend[numZone + 1];
+    int newSize = ind.nsend[numZone + 1]; //overallocates buffer by 1.2 to avoid reallocation
 
     GMX_ASSERT(cd.receiveInPlace, "Out-of-place receive is not yet supported in GPU halo exchange");
 
     // reallocates only if needed
-    h_indexMap_.resize(newSize);
+    if(newSize > h_indexMap_.size()) h_indexMap_.resize(newSize*1.2); // overallocates the buffer
     // reallocate on device only if needed
     if (newSize > maxPackedBufferSize_)
     {
-        reallocateDeviceBuffer(&d_indexMap_, newSize, &indexMapSize_, &indexMapSizeAlloc_, deviceContext_);
-        reallocateDeviceBuffer(&d_sendBuf_, newSize, &sendBufSize_, &sendBufSizeAlloc_, deviceContext_);
-        reallocateDeviceBuffer(&d_recvBuf_, newSize, &recvBufSize_, &recvBufSizeAlloc_, deviceContext_);
-        maxPackedBufferSize_ = newSize;
+        reallocateDeviceBuffer(&d_indexMap_, newSize*1.2, &indexMapSize_, &indexMapSizeAlloc_, deviceContext_);
+        reallocateDeviceBuffer(&d_sendBuf_, newSize*1.2, &sendBufSize_, &sendBufSizeAlloc_, deviceContext_);
+        reallocateDeviceBuffer(&d_recvBuf_, newSize*1.2, &recvBufSize_, &recvBufSizeAlloc_, deviceContext_);
+        maxPackedBufferSize_ = newSize*1.2;
     }
 
     xSendSize_ = newSize;
