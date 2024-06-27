@@ -105,14 +105,11 @@ void UpdateGroupsCog::addCogs(gmx::ArrayRef<const int>       globalAtomIndices,
         int         globalUpdateGroupIndex = indicesForBlock.groupStart_
                                      + moleculeIndex * indicesForBlock.numGroupsPerMolecule_
                                      + indicesForBlock.groupIndex_[atomIndexInMolecule];
-
         if (const int* cogIndexPtr = globalToLocalMap_.find(globalUpdateGroupIndex))
         {
             GMX_ASSERT(static_cast<size_t>(*cogIndexPtr) >= cogBegin,
                        "Added atoms should not be part of previously present groups");
-
             cogIndices_.push_back(*cogIndexPtr);
-
             cogs_[*cogIndexPtr] += coordinates[localAtom];
             numAtomsPerCog_[*cogIndexPtr]++;
         }
@@ -125,10 +122,12 @@ void UpdateGroupsCog::addCogs(gmx::ArrayRef<const int>       globalAtomIndices,
             numAtomsPerCog_.push_back(1);
         }
     }
+
     hipRangePop();
 
     /* Divide sum of coordinates for each COG by the number of atoms */
     hipRangePush("addCogs_divideCogs");
+#pragma omp parallel for schedule(static)
     for (size_t i = cogBegin; i < cogs_.size(); i++)
     {
         const int numAtoms = numAtomsPerCog_[i];
