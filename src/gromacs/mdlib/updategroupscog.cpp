@@ -48,6 +48,7 @@
 #include "gromacs/topology/block.h"
 #include "gromacs/topology/mtop_lookup.h"
 #include "gromacs/topology/topology.h"
+#include "gromacs/gpu_utils/gpu_utils.h"
 
 namespace gmx
 {
@@ -85,10 +86,15 @@ void UpdateGroupsCog::addCogs(gmx::ArrayRef<const int>       globalAtomIndices,
     GMX_RELEASE_ASSERT(globalAtomIndices.ssize() >= localAtomBegin,
                        "addCogs should only be called to add COGs to the list that is already "
                        "present (which could be empty)");
-
+    hipRangePush("addCogs_reserve");
     cogIndices_.reserve(globalAtomIndices.size());
+    cogs_.reserve(globalAtomIndices.size());
+    numAtomsPerCog_.reserve(globalAtomIndices.size());
+    hipRangePop();
+
 
     int moleculeBlock = 0;
+    hipRangePush("addCogs_pushBackCogs");
     for (gmx::index localAtom = localAtomBegin; localAtom < globalAtomIndices.ssize(); localAtom++)
     {
         const int globalAtom = globalAtomIndices[localAtom];
@@ -113,15 +119,16 @@ void UpdateGroupsCog::addCogs(gmx::ArrayRef<const int>       globalAtomIndices,
         else
         {
             const int cogIndex = cogs_.size();
-
             globalToLocalMap_.insert(globalUpdateGroupIndex, cogIndex);
             cogIndices_.push_back(cogIndex);
             cogs_.push_back(coordinates[localAtom]);
             numAtomsPerCog_.push_back(1);
         }
     }
+    hipRangePop();
 
     /* Divide sum of coordinates for each COG by the number of atoms */
+    hipRangePush("addCogs_divideCogs");
     for (size_t i = cogBegin; i < cogs_.size(); i++)
     {
         const int numAtoms = numAtomsPerCog_[i];
@@ -130,6 +137,7 @@ void UpdateGroupsCog::addCogs(gmx::ArrayRef<const int>       globalAtomIndices,
             cogs_[i] /= numAtoms;
         }
     }
+    hipRangePop();
 }
 
 void UpdateGroupsCog::clear()

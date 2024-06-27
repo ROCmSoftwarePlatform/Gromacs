@@ -94,6 +94,7 @@
 #include "gromacs/utility/stringstream.h"
 #include "gromacs/utility/stringutil.h"
 #include "gromacs/utility/textwriter.h"
+#include "gromacs/gpu_utils/gpu_utils.h"
 
 #include "box.h"
 #include "cellsizes.h"
@@ -2971,11 +2972,13 @@ void dd_partition_system(FILE*                     fplog,
         distributeState(mdlog, dd, top_global, state_global, ddbox, state_local);
 
         /* Ensure that we have space for the new distribution */
+	hipRangePush("dd_resize_atominfo");
         dd_resize_atominfo_and_state(fr, state_local, dd->numHomeAtoms);
-
+        hipRangePop();
         inc_nrnb(nrnb, eNR_CGCM, comm->atomRanges.numHomeAtoms());
-
+        hipRangePush("dd_set_atominfo");
         dd_set_atominfo(dd->globalAtomGroupIndices, 0, dd->numHomeAtoms, fr);
+	hipRangePop();
     }
     else if (state_local->ddp_count != dd->ddp_count)
     {
@@ -3006,10 +3009,12 @@ void dd_partition_system(FILE*                     fplog,
         ncgindex_set = dd->numHomeAtoms;
 
         inc_nrnb(nrnb, eNR_CGCM, comm->atomRanges.numHomeAtoms());
-
+        hipRangePush("dd_set_atominfo");
         dd_set_atominfo(dd->globalAtomGroupIndices, 0, dd->numHomeAtoms, fr);
-
+	hipRangePop();
+        hipRangePush("set_ddbox");
         set_ddbox(*dd, bMasterState, state_local->box, true, state_local->x, &ddbox);
+	hipRangePop();
 
         bRedist = isDlbOn(comm->dlbState);
     }
@@ -3038,19 +3043,23 @@ void dd_partition_system(FILE*                     fplog,
     /* Copy needed for dim's without pbc when avoiding communication */
     copy_rvec(ddbox.box0, comm->box0);
     copy_rvec(ddbox.box_size, comm->box_size);
-
+    hipRangePush("set_dd_cell_sizes");
     set_dd_cell_sizes(dd, &ddbox, dd->unitCellInfo.ddBoxIsDynamic, bMasterState, bDoDLB, step, wcycle);
-
+    hipRangePop();
     if (comm->ddSettings.nstDDDumpGrid > 0 && step % comm->ddSettings.nstDDDumpGrid == 0)
     {
+	hipRangePush("write_dd_grid_pdb");
         write_dd_grid_pdb("dd_grid", step, dd, state_local->box, &ddbox);
+	hipRangePop();
     }
 
     if (comm->systemInfo.useUpdateGroups)
     {
+	hipRangePush("addCogs");
         comm->updateGroupsCog->addCogs(
                 gmx::arrayRefFromArray(dd->globalAtomGroupIndices.data(), dd->numHomeAtoms),
                 state_local->x);
+	hipRangePop();
     }
 
     /* Check if we should sort the charge groups */
@@ -3067,7 +3076,9 @@ void dd_partition_system(FILE*                     fplog,
         wallcycle_sub_start(wcycle, WallCycleSubCounter::DDRedist);
 
         ncgindex_set = dd->numHomeAtoms;
+	hipRangePush("dd_redistribute_cg");
         dd_redistribute_cg(fplog, step, dd, ddbox.tric_dir, state_local, fr, nrnb, &ncg_moved);
+	hipRangePop();
 
         GMX_RELEASE_ASSERT(bSortCG, "Sorting is required after redistribution");
 
@@ -3082,6 +3093,7 @@ void dd_partition_system(FILE*                     fplog,
     }
 
     RVec cell_ns_x0, cell_ns_x1;
+    hipRangePush("get_nsgrid_boundaries");
     get_nsgrid_boundaries(ddbox.nboundeddim,
                           state_local->box,
                           dd,
@@ -3092,10 +3104,13 @@ void dd_partition_system(FILE*                     fplog,
                           as_rvec_array(state_local->x.data()),
                           cell_ns_x0,
                           cell_ns_x1);
+    hipRangePop();
 
     if (bBoxChanged)
     {
+	hipRangePush("comm_dd_ns_cell_sizes");
         comm_dd_ns_cell_sizes(dd, &ddbox, cell_ns_x0, cell_ns_x1, step);
+	hipRangePop();
     }
 
     if (bSortCG)
@@ -3111,10 +3126,12 @@ void dd_partition_system(FILE*                     fplog,
         /* Fill the ns grid with the home cell,
          * so we can sort with the indices.
          */
+	hipRangePush("set_zones_numHomeAtoms");
         set_zones_numHomeAtoms(dd);
+	hipRangePop();
 
         set_zones_size(dd, state_local->box, &ddbox, 0, 1, ncg_moved);
-
+        hipRangePush("nbnxn_put_on_grid");
         nbnxn_put_on_grid(fr->nbv.get(),
                           state_local->box,
                           0,
@@ -3127,6 +3144,7 @@ void dd_partition_system(FILE*                     fplog,
                           state_local->x,
                           ncg_moved,
                           bRedist ? comm->movedBuffer.data() : nullptr);
+	hipRangePop();
 
         if (debug)
         {
