@@ -35,6 +35,7 @@
 #include "gmxpre.h"
 
 #include "mdsetup.h"
+#include "gromacs/gpu_utils/gpu_utils.h"
 
 #include "gromacs/domdec/domdec.h"
 #include "gromacs/domdec/domdec_struct.h"
@@ -100,31 +101,38 @@ void mdAlgorithmsSetupAtomData(const t_commrec*     cr,
     {
         force->resize(numTotalAtoms);
     }
-
+    hipRangePush("atoms2md");
     atoms2md(top_global,
              inputrec,
              numAtomIndex,
              usingDomDec ? cr->dd->globalAtomIndices : std::vector<int>(),
              numHomeAtoms,
              mdAtoms);
+    hipRangePop();
 
     t_mdatoms* mdatoms = mdAtoms->mdatoms();
     if (!usingDomDec)
     {
+	hipRangePush("gmx_mtop_generate_local_top");
         gmx_mtop_generate_local_top(top_global, top, inputrec.efep != FreeEnergyPerturbationType::No);
+	hipRangePop();
     }
 
     if (fr->wholeMoleculeTransform && usingDomDec)
     {
+	hipRangePush("updateAtomOrder");
         fr->wholeMoleculeTransform->updateAtomOrder(cr->dd->globalAtomIndices, *cr->dd->ga2la);
+	hipRangePop();
     }
 
     if (vsite)
     {
+	hipRangePush("setVirtualSites");
         vsite->setVirtualSites(top->idef.il,
                                mdatoms->nr,
                                mdatoms->homenr,
                                gmx::arrayRefFromArray(mdatoms->ptype, mdatoms->nr));
+	hipRangePop();
     }
 
     /* Note that with DD only flexible constraints, not shells, are supported
@@ -149,16 +157,19 @@ void mdAlgorithmsSetupAtomData(const t_commrec*     cr,
          * For PME-only ranks, gmx_pmeonly() has its own call to gmx_pme_reinit_atoms().
          */
         const int numPmeAtoms = numHomeAtoms - fr->n_tpi;
+	hipRangePush("gmx_pme_reinit_atoms");
         gmx_pme_reinit_atoms(fr->pmedata,
                              numPmeAtoms,
                              mdatoms->chargeA ? gmx::arrayRefFromArray(mdatoms->chargeA, mdatoms->nr)
                                               : gmx::ArrayRef<real>{},
                              mdatoms->chargeB ? gmx::arrayRefFromArray(mdatoms->chargeB, mdatoms->nr)
                                               : gmx::ArrayRef<real>{});
+	hipRangePop();
     }
 
     if (constr)
     {
+	hipRangePush("setConstraints");
         constr->setConstraints(top,
                                mdatoms->nr,
                                mdatoms->homenr,
@@ -168,6 +179,7 @@ void mdAlgorithmsSetupAtomData(const t_commrec*     cr,
                                mdatoms->lambda,
                                mdatoms->cFREEZE ? gmx::arrayRefFromArray(mdatoms->cFREEZE, mdatoms->nr)
                                                 : gmx::ArrayRef<const unsigned short>());
+	hipRangePop();
     }
 }
 

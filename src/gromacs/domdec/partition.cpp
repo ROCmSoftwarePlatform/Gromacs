@@ -22,11 +22,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
  *
  * If you want to redistribute modifications to GROMACS, please
- * consider that scientific software is very special. Version
- * control is crucial - bugs must be traceable. We will be happy to
- * consider code for inclusion in the official distribution, but
- * derived work must not be called official GROMACS. Details are found
- * in the README & COPYING files - if they are missing, get the
+ * consider that scientific software is very special. Version * control is crucial - bugs must be traceable. We will be happy to * consider code for inclusion in the official distribution, but * derived work must not be called official GROMACS. Details are found * in the README & COPYING files - if they are missing, get the
  * official version at http://www.gromacs.org.
  *
  * To help us fund GROMACS development, we humbly ask that you cite
@@ -3086,9 +3082,11 @@ void dd_partition_system(FILE*                     fplog,
 
         if (comm->systemInfo.useUpdateGroups)
         {
+            hipRangePush("addCogs");
             comm->updateGroupsCog->addCogs(
                     gmx::arrayRefFromArray(dd->globalAtomGroupIndices.data(), dd->numHomeAtoms),
                     state_local->x);
+	    hipRangePop();
         }
 
         wallcycle_sub_stop(wcycle, WallCycleSubCounter::DDRedist);
@@ -3152,10 +3150,14 @@ void dd_partition_system(FILE*                     fplog,
         {
             fprintf(debug, "Step %s, sorting the %d home charge groups\n", gmx_step_str(step, sbuf), dd->numHomeAtoms);
         }
+        hipRangePush("dd_sort_state");
         dd_sort_state(dd, fr, state_local);
+	hipRangePop();
 
         /* After sorting and compacting we set the correct size */
+	hipRangePush("state_change_natoms");
         state_change_natoms(state_local, comm->atomRanges.numHomeAtoms());
+	hipRangePop();
 
         /* Rebuild all the indices */
         dd->ga2la->clear(false);
@@ -3185,20 +3187,30 @@ void dd_partition_system(FILE*                     fplog,
     wallcycle_sub_start(wcycle, WallCycleSubCounter::DDSetupComm);
 
     /* Set the induces for the home atoms */
+    hipRangePush("make_dd_indices");
     set_zones_numHomeAtoms(dd);
     make_dd_indices(dd, ncgindex_set);
+    hipRangePop();
 
     /* Setup up the communication and communicate the coordinates */
+    hipRangePush("setup_dd_communication");
     setup_dd_communication(dd, state_local->box, &ddbox, fr, state_local);
+    hipRangePop();
 
     /* Set the indices for the halo atoms */
+    hipRangePush("make_dd_indices");
     make_dd_indices(dd, dd->numHomeAtoms);
+    hipRangePop();
 
     /* Set the charge group boundaries for neighbor searching */
+    hipRangePush("set-cg_boundaries");
     set_cg_boundaries(&comm->zones);
+    hipRangePop();
 
     /* When bSortCG=true, we have already set the size for zone 0 */
+    hipRangePush("set_zones_size");
     set_zones_size(dd, state_local->box, &ddbox, bSortCG ? 1 : 0, comm->zones.n, 0);
+    hipRangePop();
 
     wallcycle_sub_stop(wcycle, WallCycleSubCounter::DDSetupComm);
 
@@ -3210,11 +3222,14 @@ void dd_partition_system(FILE*                     fplog,
     wallcycle_sub_start(wcycle, WallCycleSubCounter::DDMakeTop);
 
     /* Extract a local topology from the global topology */
+    hipRangePush("nPulses");
     IVec numPulses;
     for (int i = 0; i < dd->ndim; i++)
     {
         numPulses[dd->dim[i]] = comm->cd[i].numPulses();
     }
+    hipRangePop();
+    hipRangePush("dd_make_local_top");
     int numBondedInteractionsToReduce = dd_make_local_top(*dd,
                                                           comm->zones,
                                                           dd->unitCellInfo.npbcdim,
@@ -3226,6 +3241,7 @@ void dd_partition_system(FILE*                     fplog,
                                                           top_global,
                                                           fr->atomInfo,
                                                           top_local);
+    hipRangePop();
     dd->localTopologyChecker->scheduleCheckOfLocalTopology(numBondedInteractionsToReduce);
 
     wallcycle_sub_stop(wcycle, WallCycleSubCounter::DDMakeTop);
@@ -3233,6 +3249,7 @@ void dd_partition_system(FILE*                     fplog,
     wallcycle_sub_start(wcycle, WallCycleSubCounter::DDMakeConstr);
 
     /* Set up the special atom communication */
+    hipRangePush("special_atom_comm");
     int n = comm->atomRanges.end(DDAtomRanges::Type::Zones);
     for (int i = static_cast<int>(DDAtomRanges::Type::Zones) + 1;
          i < static_cast<int>(DDAtomRanges::Type::Number);
@@ -3264,6 +3281,7 @@ void dd_partition_system(FILE*                     fplog,
         }
         comm->atomRanges.setEnd(range, n);
     }
+    hipRangePop();
 
     wallcycle_sub_stop(wcycle, WallCycleSubCounter::DDMakeConstr);
 
@@ -3272,9 +3290,11 @@ void dd_partition_system(FILE*                     fplog,
     /* Make space for the extra coordinates for virtual site
      * or constraint communication.
      */
+    hipRangePush("state_change_natoms");
     state_local->natoms = comm->atomRanges.numAtomsTotal();
 
     state_change_natoms(state_local, state_local->natoms);
+    hipRangePop();
 
     int nat_f_novirsum;
     if (vsite && vsite->numInterUpdategroupVirtualSites())
@@ -3299,18 +3319,23 @@ void dd_partition_system(FILE*                     fplog,
      * allocation, zeroing and copying, but this is probably not worth
      * the complications and checking.
      */
+    hipRangePush("set_ranges");
     forcerec_set_ranges(fr,
                         comm->atomRanges.end(DDAtomRanges::Type::Zones),
                         comm->atomRanges.end(DDAtomRanges::Type::Constraints),
                         nat_f_novirsum);
+    hipRangePop();
 
     /* Update atom data for mdatoms and several algorithms */
+    hipRangePush("mdAlgorithmsSetupAtomData");
     mdAlgorithmsSetupAtomData(cr, inputrec, top_global, top_local, fr, f, mdAtoms, constr, vsite, nullptr);
+    hipRangePop();
 
     auto* mdatoms = mdAtoms->mdatoms();
     if (!thisRankHasDuty(cr, DUTY_PME))
     {
         /* Send the charges and/or c6/sigmas to our PME only node */
+        hipRangePush("pme_send_parameters");
         gmx_pme_send_parameters(
                 cr,
                 *fr->ic,
@@ -3330,34 +3355,46 @@ void dd_partition_system(FILE*                     fplog,
                                 : gmx::ArrayRef<real>{},
                 dd_pme_maxshift_x(*dd),
                 dd_pme_maxshift_y(*dd));
+         hipRangePop();
     }
 
     if (dd->atomSets != nullptr)
     {
         /* Update the local atom sets */
+        hipRangePush("setIndicesinDomainDecomposition");
         dd->atomSets->setIndicesInDomainDecomposition(*(dd->ga2la));
+        hipRangePop();
     }
 
     // The pull group construction can need the atom sets updated above
     if (inputrec.bPull)
     {
         /* Update the local pull groups */
+	hipRangePush("local_pull_groups");
         dd_make_local_pull_groups(cr, pull_work);
+	hipRangePop();
     }
 
     /* Update the local atoms to be communicated via the IMD protocol if bIMD is true. */
+    hipRangePush("dd_make_local_IMD_atoms");
     imdSession->dd_make_local_IMD_atoms(dd);
-
+    hipRangePop();
+    hipRangePush("add_dd_statistics");
     add_dd_statistics(dd);
+    hipRangePop();
 
     /* Make sure we only count the cycles for this DD partitioning */
+    hipRangePush("clear_dd_cycle_counts");
     clear_dd_cycle_counts(dd);
+    hipRangePop();
 
     /* Because the order of the atoms might have changed since
      * the last vsite construction, we need to communicate the constructing
      * atom coordinates again (for spreading the forces this MD step).
      */
+    hipRangePush("dd_move_x_vsites");
     dd_move_x_vsites(*dd, state_local->box, state_local->x.rvec_array());
+    hipRangePop();
 
     wallcycle_sub_stop(wcycle, WallCycleSubCounter::DDTopOther);
 
