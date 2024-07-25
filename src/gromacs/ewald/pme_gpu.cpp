@@ -160,6 +160,7 @@ void pme_gpu_prepare_computation(gmx_pme_t*               pme,
     GMX_ASSERT(pme->nnodes > 0, "");
     GMX_ASSERT(pme->nnodes == 1 || pme->ndecompdim > 0, "");
 
+    
     PmeGpu* pmeGpu = pme->gpu;
     // TODO these flags are only here to honor the CPU PME code, and probably should be removed
     pmeGpu->settings.useGpuForceReduction = stepWork.useGpuPmeFReduction;

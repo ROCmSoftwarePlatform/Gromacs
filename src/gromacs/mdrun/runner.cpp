@@ -1851,7 +1851,11 @@ int Mdrunner::mdrunner()
             gmx_bcast(sizeof(nTypePerturbed), &nTypePerturbed, cr->mpi_comm_mysim);
         }
 
-        if (thisRankHasDuty(cr, DUTY_PME))
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+        if (1)
+#else
+        if (thisrankhasduty(cr, duty_pme))
+#endif
         {
             try
             {

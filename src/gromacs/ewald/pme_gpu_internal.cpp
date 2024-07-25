@@ -415,6 +415,33 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
         }
     }
 
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+    // xxx todo rewrite this in the gromacs way
+    int rank, size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (pmeGpu->common->mgpu == 1)
+    {
+        if(pmeGpu->remoteGridHandles == NULL)
+        {
+            int numPPRanks = size-1; // xxx how to query the number of PP ranks? 
+            pmeGpu->remoteGridHandles = 
+                    (hipIpcMemoryHandle*) malloc(sizeof(hipIpcMemoryHandle)*numPPRanks);
+        }
+        // extracts IPC memhandles here from real grid
+        // XXX TODO wrap this in a internal call in deviceBuffer
+        hipError_t err = hipIpcGetMemHandle(&pmeGpu->remoteGridHandles[rank], 
+            (void*)&kernelParamsPtr->grid.d_realGrid[0]); 
+        GMX_RELEASE_ASSERT(stat == hipSuccess, 
+            ("Extracting ICP mem handle failed. " + gmx::getDeviceErrorString(stat)).c_str()); 
+        // each rank now sends their IPC handle to the PME rank (last rank is a safe assumption)
+        // all gather now to the last rank here so that it owns all handles
+        MPI_Allgather(MPI_IN_PLACE, size-1, MPI_DATATYPE_NULL, pmeGpu->remoteGridHandles, sizeof(hipIpcMemHandle_t), MPI_BYTE, MPI_COMM_WORLD);
+        // rank size - 1 owns all the IPC handles here for remote data to reduce the grids later
+    }
+#endif
+
     // allocate overlap buffers needed for PME grid halo exchanges
     if (pmeGpu->settings.useDecomposition)
     {
@@ -690,6 +717,7 @@ void pme_gpu_copy_output_spread_grid(const PmeGpu* pmeGpu, float* h_grid, const 
                          nullptr);
     pmeGpu->archSpecific->syncSpreadGridD2H.markEvent(pmeGpu->archSpecific->pmeStream_);
 }
+
 
 void pme_gpu_copy_output_spread_atom_data(const PmeGpu* pmeGpu)
 {

@@ -343,7 +343,13 @@ struct gmx_pme_t
                               * TODO: this is the information that should be owned by the task
                               * scheduler, and ideally not be duplicated here.
                               */
-
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+    PmeGpu* gpu;  /* A pointer to replications of GPU data.
+                   * There is a lot of data replication here but this is the easiest way to implement
+                   * a strong scaling scheme for pme_spline_and_spread
+                   * We need to create all buffers and communicate them with an MPI call beforehand */
+   
+#else
     PmeGpu* gpu; /* A pointer to the GPU data.
                   * TODO: this should be unique or a shared pointer.
                   * Currently in practice there is a single gmx_pme_t instance while a code
@@ -354,7 +360,7 @@ struct gmx_pme_t
                   * do we store many PME objects for different grid sizes,
                   * or a single PME object that handles different grid sizes gracefully.
                   */
-
+#endif
 
     std::unique_ptr<EwaldBoxZScaler> boxScaler; /**< The scaling data Ewald uses with walls (set at pme_init constant for the entire run) */
 

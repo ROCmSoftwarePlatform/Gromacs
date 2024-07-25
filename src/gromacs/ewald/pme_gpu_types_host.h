@@ -210,6 +210,12 @@ struct PmeGpu
 
     /*! \brief Flags if update is true to skip zeroing-out kernels */
     bool cleangrid = true;
+
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+    /*! \brief pointers to gather other grids */
+   hipIpcMemoryHandle *hipGridHandles; 
+#endif
+
 };
 
 #endif
