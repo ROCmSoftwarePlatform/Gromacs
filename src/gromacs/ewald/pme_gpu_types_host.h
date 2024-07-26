@@ -70,6 +70,10 @@ struct PmeGpuSpecific;
 typedef int PmeGpuSpecific;
 #endif
 
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+#include <hip/hip_runtime_api.h>
+#endif
+
 #if (GMX_GPU_CUDA || GMX_GPU_HIP)
 struct PmeGpuCudaKernelParams;
 /*! \brief A typedef for including the GPU kernel arguments data by pointer */
@@ -213,7 +217,7 @@ struct PmeGpu
 
 #if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
     /*! \brief pointers to gather other grids */
-   hipIpcMemoryHandle *hipGridHandles; 
+   hipIpcMemHandle_t *hipGridHandles; 
 #endif
 
 };

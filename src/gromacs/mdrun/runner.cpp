@@ -1854,7 +1854,7 @@ int Mdrunner::mdrunner()
 #if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
         if (1)
 #else
-        if (thisrankhasduty(cr, duty_pme))
+        if (thisRankHasDuty(cr, DUTY_PME))
 #endif
         {
             try

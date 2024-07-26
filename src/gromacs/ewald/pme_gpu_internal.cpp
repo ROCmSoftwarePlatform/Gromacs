@@ -83,6 +83,9 @@
 
 #if GMX_GPU_HIP
 #    include "pme.hpp"
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+#    include "thread_mpi/mpi_bindings.h"
+#endif
 #endif
 
 #include "pme_gpu_calculate_splines.h"
@@ -421,24 +424,23 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (pmeGpu->common->mgpu == 1)
+    if (pmeGpu->common->ngrids == 1)
     {
-        if(pmeGpu->remoteGridHandles == NULL)
         {
             int numPPRanks = size-1; // xxx how to query the number of PP ranks? 
-            pmeGpu->remoteGridHandles = 
-                    (hipIpcMemoryHandle*) malloc(sizeof(hipIpcMemoryHandle)*numPPRanks);
+            pmeGpu->hipGridHandles = 
+                    (hipIpcMemHandle_t*) malloc(sizeof(hipIpcMemHandle_t)*numPPRanks);
         }
+        hipError_t stat;
         // extracts IPC memhandles here from real grid
         // XXX TODO wrap this in a internal call in deviceBuffer
-        hipError_t err = hipIpcGetMemHandle(&pmeGpu->remoteGridHandles[rank], 
+        hipError_t err = hipIpcGetMemHandle(&pmeGpu->hipGridHandles[rank], 
             (void*)&kernelParamsPtr->grid.d_realGrid[0]); 
-        GMX_RELEASE_ASSERT(stat == hipSuccess, 
+        GMX_ASSERT(stat == hipSuccess, 
             ("Extracting ICP mem handle failed. " + gmx::getDeviceErrorString(stat)).c_str()); 
         // each rank now sends their IPC handle to the PME rank (last rank is a safe assumption)
         // all gather now to the last rank here so that it owns all handles
-        MPI_Allgather(MPI_IN_PLACE, size-1, MPI_DATATYPE_NULL, pmeGpu->remoteGridHandles, sizeof(hipIpcMemHandle_t), MPI_BYTE, MPI_COMM_WORLD);
-        // rank size - 1 owns all the IPC handles here for remote data to reduce the grids later
+        MPI_Gather(&pmeGpu->hipGridHandles[rank], sizeof(hipIpcMemHandle_t), MPI_BYTE, pmeGpu->hipGridHandles, sizeof(hipIpcMemHandle_t), MPI_BYTE, size-1, MPI_COMM_WORLD);
     }
 #endif
 
