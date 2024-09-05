@@ -216,8 +216,12 @@ struct PmeGpu
     bool cleangrid = true;
 
 #if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
-    /*! \brief pointers to gather other grids */
-   hipIpcMemHandle_t *hipGridHandles; 
+   /*! \brief pointers to gather other grids */
+   std::vector<hipIpcMemHandle_t*> hipGridHandles; 
+   /*! \brief raw ptrs to remote grids */
+   std::vector<float*> rawHandlesPtr;
+   /*! \brief number of remote grids */
+   int numGrids;
 #endif
 
 };

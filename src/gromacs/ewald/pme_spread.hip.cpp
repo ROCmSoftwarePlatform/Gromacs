@@ -309,6 +309,36 @@ LAUNCH_BOUNDS_EXACT_SINGLE(c_spreadMaxThreadsPerBlock) CLANG_DISABLE_OPTIMIZATIO
     }
 }
 
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+LAUNCH_BOUNDS_EXACT_SINGLE(c_spreadMaxThreadsPerBlock) 
+__global__ void pme_merge_grid_kernel( const int nGrids, 
+                                       const int gridSize, 
+                                       const float** __restrict__ ipcRawPtrs, 
+                                       float*  __restrict__ outGrid)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    // Zeroes-out the reference grid
+    outGrid[0] = 0.f;
+    if(tid < gridSize){
+        for(int  i = 0; i < nGrids; i++) 
+        {
+            outGrid[tid] += (ipcRawPtrs[i])[tid];
+        }
+    }
+}
+
+void pme_merge_grid( const int nGrids, 
+                     const int gridSize, 
+                     const float**   ipcRawPtrs, 
+                     float*    outGrid)
+{
+    const int blocks = 128;
+    const int grid  = (int)(gridSize / blocks) + 1;
+    pme_merge_grid_kernel<<<blocks, grid>>>(nGrids, gridSize, ipcRawPtrs, outGrid);
+}
+#endif
+
 //! Kernel instantiations
 // clang-format off
 template __global__ void pme_spline_and_spread_kernel<4, true, true, true, true, 1, true, ThreadsPerAtom::Order>        (const PmeGpuCudaKernelParams);

@@ -50,6 +50,10 @@
 #include <array>
 #include <optional>
 
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+#include <hip/hip_runtime.h>
+#endif
+
 #include "gromacs/applied_forces/awh/awh.h"
 #include "gromacs/domdec/dlbtiming.h"
 #include "gromacs/domdec/domdec.h"
@@ -1510,8 +1514,19 @@ void do_force(FILE*                               fplog,
             stateGpu->waitCoordinatesReadyOnHost(AtomLocality::Local);
             hipRangePop();
         }
-        
         hipRangePush( "gmx_pme_send_coordinates");
+#if defined(GMX_THREAD_MPI) && defined(GMX_STRONG_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+        launchPmeGpuSpread( fr->pmedata, 
+                            box,
+                            stepwork, 
+                            localXReadyOnDevice, 
+                            lambda[static_cast<int>(FreeEnergyPerturbationCouplingType::Coul)],
+                            wcycle);
+        
+        // XXX TODO: we need a check here if there is >= 1 grid
+        // If there's more than one, we follow the original (slow) codepath
+        // what do I need to do now....
+#else
         gmx_pme_send_coordinates(fr,
                                  cr,
                                  box,
@@ -1527,6 +1542,7 @@ void do_force(FILE*                               fplog,
                                  localXReadyOnDevice,
                                  wcycle);
         hipRangePop();
+#endif
     }
 
     if (stepWork.haveGpuPmeOnThisRank)
@@ -1541,6 +1557,22 @@ void do_force(FILE*                               fplog,
         hipRangePop();
     }
 
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+    // xxx figure out a better way to synchronize here. 
+    hipDeviceSynchronize();
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (stepWork.haveGpuPmeOnThisRank)
+    {
+        // on the pme rank, we need to wait until all spreads have finished launched
+        // I can actually use localXReadyOnDevice or something akin to that
+        // Reduce the grid here and launch other stuff. 
+        // We need another launcher function / kernel to reduce the calculated grids
+        const int numPPRanks = cr->dd->nnodes;
+        pme_gpu_launch_merge_remote_grids( (const gmx_pme_t*) fr->pmedata,
+                                          numPPRanks); 
+    }
+#endif
     const gmx::DomainLifetimeWorkload& domainWork = runScheduleWork->domainWork;
 
     /* do gridding for pair search */

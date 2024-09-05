@@ -273,6 +273,7 @@ void pme_gpu_free_grids(const PmeGpu* pmeGpu);
  */
 void pme_gpu_clear_grids(const PmeGpu* pmeGpu);
 
+
 /*! \libinternal \brief
  * Reallocates and copies the pre-computed fractional coordinates' shifts to the GPU.
  *
@@ -600,5 +601,10 @@ GPU_FUNC_QUALIFIER void pme_set_grid_and_size(const PmeGpu*       GPU_FUNC_ARGUM
                                               int*                GPU_FUNC_ARGUMENT(realGridSize),
                                               DeviceBuffer<real>* GPU_FUNC_ARGUMENT(d_grid)) GPU_FUNC_TERM;
 
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+GPU_FUNC_QUALIFIER void pme_gpu_merge_remote_grids(const PmeGpu*       GPU_FUNC_ARGUMENT(pmeGpu),
+                                                   const int           GPU_FUNC_ARGUMENT(nRemoteSenders),
+                                                   float**             GPU_FUNC_ARGUMENT(rawPointers)) GPU_FUNC_TERM;
+#endif
 
 #endif

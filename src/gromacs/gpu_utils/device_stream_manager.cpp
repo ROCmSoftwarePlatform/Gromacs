@@ -98,7 +98,8 @@ DeviceStreamManager::Impl::Impl(const DeviceInformation& deviceInfo,
         streams_[DeviceStreamType::NonBondedLocal] =
                 std::make_unique<DeviceStream>(context_, DeviceStreamPriority::Normal, useTiming);
 
-        if (simulationWork.useGpuPme && hasPme)
+        // if (simulationWork.useGpuPme && hasPme)
+        if (simulationWork.useGpuPme)
         {
             /* Creating a PME GPU stream:
              * - default high priority with CUDA

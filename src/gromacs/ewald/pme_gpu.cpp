@@ -234,6 +234,19 @@ void pme_gpu_launch_spread(gmx_pme_t*                     pme,
     wallcycle_stop(wcycle, WallCycleCounter::LaunchGpu);
 }
 
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+void pme_gpu_launch_merge_remote_grids(const gmx_pme_t* pme, 
+                                       const int        ngrids) // number of grids to merge
+{
+    GMX_ASSERT(pme_gpu_active(pme), "This should be a GPU run of PME but it is not enabled.");
+
+    // Ok now we grab all of the IPC pointers from the pme_gpu_internal
+    PmeGpu* pmeGpu = pme->gpu;
+    float** rawPtrs = pmeGpu->rawHandlesPtr.data();
+    pme_gpu_merge_remote_grids(pmeGpu, ngrids, rawPtrs);
+}
+#endif
+
 void pme_gpu_launch_complex_transforms(gmx_pme_t* pme, gmx_wallcycle* wcycle, const gmx::StepWorkload& stepWork)
 {
     PmeGpu*     pmeGpu   = pme->gpu;

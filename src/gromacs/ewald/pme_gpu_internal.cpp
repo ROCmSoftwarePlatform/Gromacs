@@ -428,19 +428,29 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
     {
         {
             int numPPRanks = size-1; // xxx how to query the number of PP ranks? 
-            pmeGpu->hipGridHandles = 
-                    (hipIpcMemHandle_t*) malloc(sizeof(hipIpcMemHandle_t)*numPPRanks);
+            int numGrids = numPPRanks;
+            pmeGpu->hipGridHandles.resize(numPPRanks);  
+            pmeGpu->rawHandlesPtr.resize(numPPRanks);  
         }
         hipError_t stat;
         // extracts IPC memhandles here from real grid
         // XXX TODO wrap this in a internal call in deviceBuffer
-        hipError_t err = hipIpcGetMemHandle(&pmeGpu->hipGridHandles[rank], 
-            (void*)&kernelParamsPtr->grid.d_realGrid[0]); 
+        hipError_t err = hipIpcGetMemHandle(pmeGpu->hipGridHandles[rank], 
+            (void*)kernelParamsPtr->grid.d_realGrid[0]); 
         GMX_ASSERT(stat == hipSuccess, 
             ("Extracting ICP mem handle failed. " + gmx::getDeviceErrorString(stat)).c_str()); 
         // each rank now sends their IPC handle to the PME rank (last rank is a safe assumption)
         // all gather now to the last rank here so that it owns all handles
-        MPI_Gather(&pmeGpu->hipGridHandles[rank], sizeof(hipIpcMemHandle_t), MPI_BYTE, pmeGpu->hipGridHandles, sizeof(hipIpcMemHandle_t), MPI_BYTE, size-1, MPI_COMM_WORLD);
+        hipIpcMemHandle_t* sendHandle = pmeGpu->hipGridHandles[rank];
+        MPI_Gather(&sendHandle, sizeof(hipIpcMemHandle_t), MPI_BYTE, pmeGpu->hipGridHandles.data(), sizeof(hipIpcMemHandle_t)*size, MPI_BYTE, size-1, MPI_COMM_WORLD);
+        if (rank == size-1) 
+        {
+            // adds raw ptrs to an array
+            for(int i = 0 ; i < size-1; i++)
+                err = hipIpcOpenMemHandle((void**)&pmeGpu->rawHandlesPtr[i], 
+                                          *pmeGpu->hipGridHandles[i], 
+                                          hipIpcMemLazyEnablePeerAccess);
+        }
     }
 #endif
 
@@ -1843,6 +1853,21 @@ void pme_gpu_spread(const PmeGpu*                  pmeGpu,
         pme_gpu_copy_output_spread_atom_data(pmeGpu);
     }
 }
+
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+void pme_gpu_merge_remote_grids(const PmeGpu* pmeGpu, 
+                                const int nremoteSenders, // i.e. number of ppranks that launched spline
+                                float **remoteGrids)
+{
+    // Gets remote references and merge everything into a single grid
+    KernelLaunchConfig config;
+    const int gridSize = pmeGpu->archSpecific->realGridSize[0];
+    pme_merge_grid(nremoteSenders,
+                   gridSize,
+                   (const float **)remoteGrids, 
+                   remoteGrids[nremoteSenders]);
+}
+#endif
 
 void pme_gpu_solve(const PmeGpu* pmeGpu,
                    const int     gridIndex,

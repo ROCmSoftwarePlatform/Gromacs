@@ -420,6 +420,27 @@ GPU_FUNC_QUALIFIER void pme_gpu_launch_spread(
         gmx::PmeCoordinateReceiverGpu* GPU_FUNC_ARGUMENT(pmeCoordinateReceiverGpu)) GPU_FUNC_TERM;
 
 /*! \brief
+ * Launches the merging kernel after launching the pme spline kernels 
+ *
+ * \param[in] pme                            The PME data structure.
+ * \param[in] xReadyOnDevice                 Event synchronizer indicating that the coordinates
+ *                                           are ready in the device memory; nullptr allowed only
+ *                                           on separate PME ranks.
+ */
+
+/*! \libinternal \brief
+ * Merges remote grids into a single one
+ * Should be called at the end of each computation.
+ *
+ * \param[in] pmeGpu            The PME GPU structure.
+ * \param[in] nremoteGrids      Number of remote grids to merge
+ */
+
+GPU_FUNC_QUALIFIER void 
+pme_gpu_launch_merge_remote_grids(const gmx_pme_t* GPU_FUNC_ARGUMENT(pmeGpu),
+                                  const int GPU_FUNC_ARGUMENT(nremoteGrids)) GPU_FUNC_TERM;
+
+/*! \brief
  * Launches middle stages of PME (FFT R2C, solving, FFT C2R) either on GPU or on CPU, depending on the run mode.
  *
  * \param[in] pme               The PME data structure.

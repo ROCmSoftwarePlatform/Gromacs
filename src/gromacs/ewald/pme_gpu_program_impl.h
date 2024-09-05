@@ -49,6 +49,10 @@
 #include "gromacs/gpu_utils/device_context.h"
 #include "gromacs/utility/classhelpers.h"
 
+#if defined(GMX_GPU_HIP) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_THREAD_MPI)
+void pme_merge_grid(const int nGrids, const int gridSize, const float** ipcRawPtrs, float* outGrid);
+#endif
+
 class ISyclKernelFunctor;
 class DeviceContext;
 struct DeviceInformation;
