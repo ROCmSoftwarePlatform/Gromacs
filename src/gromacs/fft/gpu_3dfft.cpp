@@ -121,6 +121,29 @@ Gpu3dFft::Gpu3dFft(FftBackend           backend,
     switch (backend)
     {
         case FftBackend::Hipfft:
+            int rank, size;
+            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+            MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+            for(int i = 0; i < size; i++){
+                if(rank == i){
+                    fprintf(stderr, "rank %d %d %d %d %d\n", 
+                        rank, 
+                        nz, 
+                        *realGridSize, 
+                        *realGridSizePadded, 
+                        *complexGridSizePadded);
+                    fprintf(stderr ," Printing gridSizesForEachRank\n");
+                    for(int j = 0; j < gridSizesInXForEachRank.size(); j++){
+                        fprintf(stderr, " %d %d",
+                                gridSizesInXForEachRank[i],
+                                gridSizesInYForEachRank[i]);
+                    }
+                    fprintf(stderr, "\n");
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+
             impl_ = std::make_unique<Gpu3dFft::ImplHipFft>(allocateGrids,
                                                            comm,
                                                            gridSizesInXForEachRank,

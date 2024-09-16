@@ -426,15 +426,15 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
 
     if (pmeGpu->common->ngrids == 1)
     {
-        {
-            int numPPRanks = size-1; // xxx how to query the number of PP ranks? 
-            int numGrids = numPPRanks;
-            pmeGpu->hipGridHandles.resize(numPPRanks);  
-            pmeGpu->rawHandlesPtr.resize(numPPRanks);  
-        }
+        int numPPRanks = size-1; // xxx how to query the number of PP ranks? 
+        int numGrids = numPPRanks;
+        pmeGpu->hipGridHandles.resize(numPPRanks);  
+        pmeGpu->rawHandlesPtr.resize(numPPRanks);  
+        
         hipError_t stat;
         // extracts IPC memhandles here from real grid
         // XXX TODO wrap this in a internal call in deviceBuffer
+#if 0
         hipError_t err = hipIpcGetMemHandle(pmeGpu->hipGridHandles[rank], 
             (void*)kernelParamsPtr->grid.d_realGrid[0]); 
         GMX_ASSERT(stat == hipSuccess, 
@@ -451,6 +451,12 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
                                           *pmeGpu->hipGridHandles[i], 
                                           hipIpcMemLazyEnablePeerAccess);
         }
+#else
+        pmeGpu->rawHandlesPtr[rank] = kernelParamsPtr->grid.d_realGrid[0];
+        float* sendHandle = pmeGpu->rawHandlesPtr[rank];
+        // size-1 as root rank because it's usually the PME rank 
+        MPI_Gather(sendHandle, sizeof(float), MPI_BYTE, pmeGpu->rawHandlesPtr.data(), sizeof(float)*numGrids, MPI_BYTE, size-1, MPI_COMM_WORLD);
+#endif
     }
 #endif
 
