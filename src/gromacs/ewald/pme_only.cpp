@@ -779,13 +779,17 @@ int gmx_pmeonly(struct gmx_pme_t*               pme,
             // On the separate PME rank we do not need a synchronizer as we schedule everything in a single stream
             // TODO: with pme on GPU the receive should make a list of synchronizers and pass it here #3157
             auto xReadyOnDevice = nullptr;
-
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+            // XXX todo missing synchronization inside this kernel
+            pme_gpu_launch_merge_remote_grids(pme, pme_pp->ppRanks.size());
+#else
             pme_gpu_launch_spread(pme,
                                   xReadyOnDevice,
                                   wcycle,
                                   lambda_q,
                                   pme_pp->useGpuDirectComm,
                                   pme_pp->pmeCoordinateReceiverGpu.get());
+#endif
             pme_gpu_launch_complex_transforms(pme, wcycle, stepWork);
             pme_gpu_launch_gather(pme, wcycle, lambda_q);
             output = pme_gpu_wait_finish_task(pme, computeEnergyAndVirial, lambda_q, wcycle);
