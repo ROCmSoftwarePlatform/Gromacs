@@ -426,7 +426,7 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
 
     if (pmeGpu->common->ngrids == 1)
     {
-        int numPPRanks = size-1; // xxx how to query the number of PP ranks? 
+        int numPPRanks = size; // xxx how to query the number of PP ranks? 
         int numGrids = numPPRanks;
         pmeGpu->hipGridHandles.resize(numPPRanks);  
         pmeGpu->rawHandlesPtr.resize(numPPRanks);  
@@ -455,6 +455,7 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
         pmeGpu->rawHandlesPtr[rank] = kernelParamsPtr->grid.d_realGrid[0];
         float* sendHandle = pmeGpu->rawHandlesPtr[rank];
         // size-1 as root rank because it's usually the PME rank 
+        pmeGpu->isPmeRank = (rank == size - 1);
         MPI_Gather(sendHandle, sizeof(float), MPI_BYTE, pmeGpu->rawHandlesPtr.data(), sizeof(float)*numGrids, MPI_BYTE, size-1, MPI_COMM_WORLD);
 #endif
     }
@@ -1119,7 +1120,13 @@ static void pme_gpu_reinit_grids(PmeGpu* pmeGpu)
     }
 
     pme_gpu_realloc_grids(pmeGpu);
-    pme_gpu_reinit_3dfft(pmeGpu);
+
+    // Only the PME-assigned rank does FFT, so if we're strong-scaling spline we just avoid reiniting it
+    // How do I flag if this if havePMEonThisRank? I think we should flag it on PmeGpu
+    if(pmeGpu->isPmeRank)
+    {
+        pme_gpu_reinit_3dfft(pmeGpu);
+    }
 }
 
 /* Several GPU functions that refer to the CPU PME data live here.
@@ -2295,5 +2302,4 @@ GpuEventSynchronizer* pme_gpu_get_forces_ready_synchronizer(const PmeGpu* pmeGpu
 void pme_set_grid_and_size(const PmeGpu* pmeGpu, int* realGridSize, DeviceBuffer<real>* d_grid){
     *realGridSize =  pmeGpu->archSpecific->realGridSize[0];
     *d_grid        = pmeGpu->kernelParams->grid.d_realGrid[0];
-    // fprintf(stderr, "setting realGridSize to %d and d_grid to %p\n", *realGridSize, *d_grid);
 }

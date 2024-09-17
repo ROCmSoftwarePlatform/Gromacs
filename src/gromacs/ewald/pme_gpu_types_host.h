@@ -222,6 +222,8 @@ struct PmeGpu
    std::vector<float*> rawHandlesPtr;
    /*! \brief number of remote grids */
    int numGrids;
+   /*! \brief true if we should launch fft on this rank in case we're strong-scaling the spline*/
+   int isPmeRank;
 #endif
 
 };
