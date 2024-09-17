@@ -426,14 +426,15 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
 
     if (pmeGpu->common->ngrids == 1)
     {
-        int numPPRanks = size; // xxx how to query the number of PP ranks? 
+        int numPPRanks = size - 1; // xxx how to query the number of PP ranks? 
         int numGrids = numPPRanks;
-        pmeGpu->rawHandlesPtr.resize(numPPRanks);  
-        pmeGpu->rawHandlesPtr[rank] = kernelParamsPtr->grid.d_realGrid[0];
-        float* sendHandle = pmeGpu->rawHandlesPtr[rank];
+        pmeGpu->rawHandlesPtr.resize(numPPRanks+1);  
+        // pmeGpu->rawHandlesPtr[rank] = kernelParamsPtr->grid.d_realGrid[0];
+        float* sendHandle = kernelParamsPtr->grid.d_realGrid[0];
         // size-1 as root rank because it's usually the PME rank 
         pmeGpu->isPmeRank = (rank == size - 1);
-        MPI_Gather(sendHandle, sizeof(float), MPI_BYTE, pmeGpu->rawHandlesPtr.data(), sizeof(float)*numGrids, MPI_BYTE, size-1, MPI_COMM_WORLD);
+        MPI_Gather(sendHandle, sizeof(float), MPI_BYTE, pmeGpu->rawHandlesPtr.data(), 
+                   sizeof(float), MPI_BYTE, size-1, MPI_COMM_WORLD);
     }
 #endif
 
