@@ -265,6 +265,21 @@ int gmx_pme_do(struct gmx_pme_t*              pme,
 real gmx_pme_calc_energy(gmx_pme_t* pme, gmx::ArrayRef<const gmx::RVec> x, gmx::ArrayRef<const real> q);
 
 /*! \brief
+ * This function exchange the charge datastructure amongst pme-pp ranks 
+ * \param[in,out] pme        The PME structure.
+ * \param[in]     numAtoms   The number of particles.
+ * \param[in]     chargesA   The pointer to the array of particle charges in the normal state or FEP
+ * state A. Can be nullptr if PME is not performed on the GPU.
+ * \param[in]     chargesB   The pointer to the array of particle charges in state B. Only used if
+ * charges are perturbed and can otherwise be nullptr.
+ */
+void gmx_pme_exchange_charge_data(gmx_pme_t*                pme,
+                                  int                       numAtoms,
+                                  gmx::ArrayRef<real> chargesA,
+                                  gmx::ArrayRef<real> chargesB);
+
+
+/*! \brief
  * This function updates the local atom data on GPU after DD (charges, coordinates, etc.).
  * TODO: it should update the PME CPU atom data as well.
  * (currently PME CPU call gmx_pme_do() gets passed the input pointers for each computation).

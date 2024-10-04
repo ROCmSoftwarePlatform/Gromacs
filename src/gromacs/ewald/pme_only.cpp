@@ -424,13 +424,20 @@ static int gmx_pme_recv_coeffs_coords(struct gmx_pme_t*            pme,
                 }
             }
         }
-
+        // other ranks need to save this information somewhere to launch kernels later
+        gmx_pme_exchange_charge_data(pme, 
+                                    pme_pp->chargeA.data().size(), 
+                                    pme_pp->pmeRank_,
+                                    true,
+                                    pme_pp->chargeA.data(), 
+                                    pme_pp->chargeB.data());
+                                     
         if (cnb.flags & PP_PME_COORD)
         {
             if (atomSetChanged)
             {
                 gmx_pme_reinit_atoms(pme, nat, pme_pp->chargeA, pme_pp->chargeB);
-                if (useGpuForPme)
+
                 {
                     stateGpu->reinit(nat, nat);
                     pme_gpu_set_device_x(pme, stateGpu->getCoordinates());
@@ -720,14 +727,7 @@ int gmx_pmeonly(struct gmx_pme_t*               pme,
                                              useGpuForPme,
                                              stateGpu.get(),
                                              runMode);
-
-            if (ret == pmerecvqxSWITCHGRID)
-            {
-                /* Switch the PME grid to newGridSize */
-                pme = gmx_pmeonly_switch(&pmedata, newGridSize, ewaldcoeff_q, ewaldcoeff_lj, cr, ir);
-            }
-
-            if (ret == pmerecvqxRESETCOUNTERS)
+            
             {
                 /* Reset the cycle and flop counters */
                 reset_pmeonly_counters(wcycle, walltime_accounting, mynrnb, step, useGpuForPme);

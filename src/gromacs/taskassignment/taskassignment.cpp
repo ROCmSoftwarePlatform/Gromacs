@@ -463,10 +463,13 @@ bool GpuTaskAssignments::thisRankHasPmeGpuTask() const
 {
     const GpuTaskAssignment& gpuTaskAssignment = assignmentForAllRanksOnThisNode_[indexOfThisRank_];
 
+#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
+    const bool thisRankHasPmeGpuTask = true;
+#else
     auto pmeGpuTaskMapping = std::find_if(
             gpuTaskAssignment.begin(), gpuTaskAssignment.end(), hasTaskType<GpuTask::Pme>);
     const bool thisRankHasPmeGpuTask = (pmeGpuTaskMapping != gpuTaskAssignment.end());
-
+#endif
     return thisRankHasPmeGpuTask;
 }
 

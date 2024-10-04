@@ -1698,6 +1698,7 @@ void pme_gpu_spread(const PmeGpu*                  pmeGpu,
     kernelParamsPtr->usePipeline = char(computeSplines && spreadCharges && useGpuDirectComm
                                     && (pmeCoordinateReceiverGpu->ppCommNumSenderRanks() > 1)
                                     && !writeGlobalOrSaveSplines);
+    
     if (kernelParamsPtr->usePipeline != 0)
     {
         int numStagesInPipeline = pmeCoordinateReceiverGpu->ppCommNumSenderRanks();
@@ -2280,3 +2281,4 @@ void pme_set_grid_and_size(const PmeGpu* pmeGpu, int* realGridSize, DeviceBuffer
     *realGridSize =  pmeGpu->archSpecific->realGridSize[0];
     *d_grid        = pmeGpu->kernelParams->grid.d_realGrid[0];
 }
+

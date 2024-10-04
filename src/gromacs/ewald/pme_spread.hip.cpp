@@ -219,6 +219,7 @@ LAUNCH_BOUNDS_EXACT_SINGLE(c_spreadMaxThreadsPerBlock) CLANG_DISABLE_OPTIMIZATIO
     /* Early return for fully empty blocks at the end
      * (should only happen for billions of input atoms)
      */
+
     if (atomIndexOffset >= kernelParams.atoms.nAtoms)
     {
         return;
@@ -336,6 +337,7 @@ void pme_merge_grid( const int nGrids,
     const int blocks = 128;
     const int grid  = (int)(gridSize / blocks) + 1;
     pme_merge_grid_kernel<<<blocks, grid>>>(nGrids, gridSize, ipcRawPtrs, outGrid);
+    printf(" finished launching merge kernel!\n");
 }
 #endif
 

@@ -1654,7 +1654,6 @@ int Mdrunner::mdrunner()
                                   globalState.get(),
                                   cr,
                                   &mdrunOptions.checkpointOptions.period);
-
     const bool               thisRankHasPmeGpuTask = gpuTaskAssignments.thisRankHasPmeGpuTask();
     std::unique_ptr<MDAtoms> mdAtoms;
     std::unique_ptr<VirtualSitesHandler> vsite;

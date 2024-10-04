@@ -602,9 +602,29 @@ GPU_FUNC_QUALIFIER void pme_set_grid_and_size(const PmeGpu*       GPU_FUNC_ARGUM
                                               DeviceBuffer<real>* GPU_FUNC_ARGUMENT(d_grid)) GPU_FUNC_TERM;
 
 #if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+/**
+ * \brief Merges remote previously-splined grid into a single one 
+ *
+ * This launches a kernel to merge all grid from all PP ranks into a single one. 
+ *
+ * \param pmeGpu The PME GPU data structure
+ */
 GPU_FUNC_QUALIFIER void pme_gpu_merge_remote_grids(const PmeGpu*       GPU_FUNC_ARGUMENT(pmeGpu),
                                                    const int           GPU_FUNC_ARGUMENT(nRemoteSenders),
-                                                   float**             GPU_FUNC_ARGUMENT(rawPointers)) GPU_FUNC_TERM;
+                                                   float**             GPU_FUNC_ARGUMENT(rawPointers)                                        const int
+/**
+ * \brief Sets global charge arrays for the 
+ *
+ * This function initializes the charges for the PME (Particle-Mesh Ewald) GPU.
+ *
+ * \param[in] pmeGpu Pointer to the PmeGpu structure.
+ * \param[in] numGlobalAtoms The total number of atoms in the system.
+ * \param[in] chargesA The global charges of the system
+ * \param[in] chargesB Optional set of charges if FEP is on 
+ */
+GPU_FUNC_QUALIFIER void pme_gpu_set_charges(const PmeGpu*            GPU_FUNC_ARGUMENT(pmeGpu),
+                                            const std::vector<real>& GPU_FUNC_ARGUMENT(chargesA),  
+                                            const std::vector<real>& GPU_FUNC_ARGUMENT(chargesB)) GPU_FUNC_TERM;
 #endif
 
 #endif
