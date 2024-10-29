@@ -382,7 +382,7 @@ void pme_gpu_realloc_grids(PmeGpu* pmeGpu)
 
     const int newRealGridSize = kernelParamsPtr->grid.realGridSizePadded[XX]
                                 * kernelParamsPtr->grid.realGridSizePadded[YY]
-                                * kernelParamsPtr->grid.realGridSizePadded[ZZ];
+                                * kernelParamsPtr->grid.realGridSizePadded[ZZ] * 4;
     const int newComplexGridSize = kernelParamsPtr->grid.complexGridSizePadded[XX]
                                    * kernelParamsPtr->grid.complexGridSizePadded[YY]
                                    * kernelParamsPtr->grid.complexGridSizePadded[ZZ] * 2;

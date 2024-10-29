@@ -68,6 +68,7 @@
 #include "pme_grid.h"
 #include "pme_internal.h"
 #include "pme_solve.h"
+#include <hip/hip_runtime.h>
 #ifdef GMX_USE_ROCTX
 #include "roctx.h"
 #endif
@@ -231,6 +232,8 @@ void pme_gpu_launch_spread(gmx_pme_t*                     pme,
                    pmeCoordinateReceiverGpu);
     wallcycle_sub_stop(wcycle, WallCycleSubCounter::LaunchGpuPme);
     wallcycle_stop(wcycle, WallCycleCounter::LaunchGpu);
+    hipDeviceSynchronize();
+    std::exit(1);
 }
 
 void pme_gpu_launch_complex_transforms(gmx_pme_t* pme, gmx_wallcycle* wcycle, const gmx::StepWorkload& stepWork)

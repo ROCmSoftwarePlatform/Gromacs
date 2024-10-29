@@ -97,6 +97,8 @@ __device__ __forceinline__ void spread_charges(const PmeGpuCudaKernelParams kern
     const int nx  = kernelParams.grid.realGridSize[XX];
     const int ny  = kernelParams.grid.realGridSize[YY];
     const int nz  = kernelParams.grid.realGridSize[ZZ];
+    const int globalStride = nx * ny * nz;
+
     const int pny = kernelParams.grid.realGridSizePadded[YY];
     const int pnz = kernelParams.grid.realGridSizePadded[ZZ];
 
@@ -141,6 +143,8 @@ __device__ __forceinline__ void spread_charges(const PmeGpuCudaKernelParams kern
             float       thetaY = sm_theta[splineIndexY];
             const float Val    = thetaZ * thetaY * (*atomCharge);
             assert(isfinite(Val));
+            // Multiplies iz by a global stride here so that 
+            // atomic updates to the same cache line 
             const int offset = iy * pnz + iz;
 
 #pragma unroll
@@ -152,12 +156,20 @@ __device__ __forceinline__ void spread_charges(const PmeGpuCudaKernelParams kern
                     ix -= nx;
                 }
                 const int gridIndexGlobal = ix * pny * pnz + offset;
+                /*
+                if (blockIdx.x == 0 )
+                {
+                    printf("tid %d %d %d ix %d iy %d iz %d gig = %d globalStride=%d \n", 
+                        threadIdx.x, threadIdx.y, threadIdx.z, 
+                        ix, iy, iz, gridIndexGlobal, (int)globalStride*threadIdx.x);
+                }
+                */
                 const int splineIndexX =
                         getSplineParamIndex<order, atomsPerWarp>(splineIndexBase, XX, ithx);
                 const float thetaX = sm_theta[splineIndexX];
                 assert(isfinite(thetaX));
                 assert(isfinite(gm_grid[gridIndexGlobal]));
-                atomicAdd(gm_grid + gridIndexGlobal, thetaX * Val);
+                atomicAdd(gm_grid + gridIndexGlobal + globalStride, thetaX * Val);
             }
         }
     }
