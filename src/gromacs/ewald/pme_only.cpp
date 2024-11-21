@@ -111,6 +111,7 @@ struct gmx_pme_pp
     MPI_Comm             mpi_comm_mysim; /**< MPI communicator for this simulation */
     std::vector<PpRanks> ppRanks;        /**< The PP partner ranks                 */
     int                  peerRankId;     /**< The peer PP rank id                  */
+    int                  pmeRank; /**< The PME rank id */
     //@{
     /**< Vectors of A- and B-state parameters used to transfer vectors to PME ranks  */
     gmx::PaddedHostVector<real> chargeA;
@@ -151,6 +152,7 @@ static std::unique_ptr<gmx_pme_pp> gmx_pme_pp_init(const t_commrec* cr)
     MPI_Comm_rank(cr->mpi_comm_mygroup, &rank);
     auto ppRanks = get_pme_ddranks(cr, rank);
     pme_pp->ppRanks.reserve(ppRanks.size());
+    pme_pp->pmeRank = rank;
     for (const auto& ppRankId : ppRanks)
     {
         pme_pp->ppRanks.push_back({ ppRankId, 0 });
@@ -426,11 +428,9 @@ static int gmx_pme_recv_coeffs_coords(struct gmx_pme_t*            pme,
         }
         // other ranks need to save this information somewhere to launch kernels later
         gmx_pme_exchange_charge_data(pme, 
-                                    pme_pp->chargeA.data().size(), 
-                                    pme_pp->pmeRank_,
-                                    true,
-                                    pme_pp->chargeA.data(), 
-                                    pme_pp->chargeB.data());
+                                     pme_pp->chargeA.size(), 
+                                     (pme_pp->chargeA.data()), 
+                                     (pme_pp->chargeB.data()));
                                      
         if (cnb.flags & PP_PME_COORD)
         {

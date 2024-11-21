@@ -215,16 +215,12 @@ struct PmeGpu
     /*! \brief Flags if update is true to skip zeroing-out kernels */
     bool cleangrid = true;
 
-#if defined(GMX_GPU_HIP) && defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU)
-   /*! \brief pointers to gather other grids */
-   std::vector<hipIpcMemHandle_t*> hipGridHandles; 
-   /*! \brief raw ptrs to remote grids */
-   std::vector<float*> rawHandlesPtr;
-   /*! \brief number of remote grids */
-   int numGrids;
-   /*! \brief true if we should launch fft on this rank in case we're strong-scaling the spline*/
-   int isPmeRank;
-#endif
+    /*! \brief raw ptrs to remote grids */
+    std::vector<float*> rawHandlesPtr;
+    /*! \brief number of remote grids */
+     int numGrids;
+    /*! \brief true if we should launch fft on this rank in case we're strong-scaling the spline*/
+    int isPmeRank;
 
 };
 

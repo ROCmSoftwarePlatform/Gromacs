@@ -611,7 +611,7 @@ GPU_FUNC_QUALIFIER void pme_set_grid_and_size(const PmeGpu*       GPU_FUNC_ARGUM
  */
 GPU_FUNC_QUALIFIER void pme_gpu_merge_remote_grids(const PmeGpu*       GPU_FUNC_ARGUMENT(pmeGpu),
                                                    const int           GPU_FUNC_ARGUMENT(nRemoteSenders),
-                                                   float**             GPU_FUNC_ARGUMENT(rawPointers)                                        const int
+                                                   float**             GPU_FUNC_ARGUMENT(rawPointers)) GPU_FUNC_TERM;
 /**
  * \brief Sets global charge arrays for the 
  *
@@ -622,7 +622,7 @@ GPU_FUNC_QUALIFIER void pme_gpu_merge_remote_grids(const PmeGpu*       GPU_FUNC_
  * \param[in] chargesA The global charges of the system
  * \param[in] chargesB Optional set of charges if FEP is on 
  */
-GPU_FUNC_QUALIFIER void pme_gpu_set_charges(const PmeGpu*            GPU_FUNC_ARGUMENT(pmeGpu),
+ void pme_gpu_set_charges(const PmeGpu*            GPU_FUNC_ARGUMENT(pmeGpu),
                                             const std::vector<real>& GPU_FUNC_ARGUMENT(chargesA),  
                                             const std::vector<real>& GPU_FUNC_ARGUMENT(chargesB)) GPU_FUNC_TERM;
 #endif

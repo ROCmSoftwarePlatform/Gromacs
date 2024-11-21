@@ -337,7 +337,20 @@ void pme_merge_grid( const int nGrids,
     const int blocks = 128;
     const int grid  = (int)(gridSize / blocks) + 1;
     pme_merge_grid_kernel<<<blocks, grid>>>(nGrids, gridSize, ipcRawPtrs, outGrid);
-    printf(" finished launching merge kernel!\n");
+#if 1
+    hipDeviceSynchronize();
+    printf("printing the merged grid values");
+    float* h_grid = new float(gridSize);
+    hipMemcpy(h_grid, outGrid, sizeof(float)*gridSize, hipMemcpyDeviceToHost);
+
+    for(int i = 0 ; i < gridSize; i++)
+    {
+        printf("outGrid[%d] = %f\n", i, h_grid[i]);
+    }
+    delete h_grid;
+#endif
+
+    printf("finished launching merge kernel!\n");
 }
 #endif
 

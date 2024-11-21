@@ -1816,14 +1816,17 @@ void gmx_pme_destroy(gmx_pme_t* pme)
 }
 
 #if defined(GMX_THREAD_MPI) && defined(GMX_GPU_HIP) && defined(GMX_SCALE_SPLINE_MGPU)
-void gmx_pme_exchange_charge_data(gmx_pme_t* pme, 
-                                  ArrayRef<real>& chargesA, 
-                                  ArrayRef<real>& chargesB)
+
+void gmx_pme_exchange_charge_data(gmx_pme_t* pme,
+                                  int numCharges, 
+                                  real* chargesA, 
+                                  real* chargesB)
 {
-    // I really need a better way to find out who's the PME rank here...
     int commRank, commSize;
-    MPI_Comm_rank(&commRank, MPI_COMM_WORLD);
-    MPI_Comm_size(&commSize, MPI_COMM_WORLD);
+    
+    // XXX JM: MPI_COMM_WORLD is not right here, we need to use cr->mpi_comm_mygroup i think
+    MPI_Comm_rank(MPI_COMM_WORLD, &commRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     int pmeRank = commRank == (commSize -1);
 
     int numGlobalAtoms = -1;
@@ -1832,11 +1835,10 @@ void gmx_pme_exchange_charge_data(gmx_pme_t* pme,
     {
         // only the pme rank has the charge arrays completely filled. 
         // we flag which rank is doing PME for broadcasting 
-        numGlobalAtoms = chargesA.size();
+        numGlobalAtoms = numCharges; 
     } 
     MPI_Bcast(&numGlobalAtoms, sizeof(int), MPI_INT, pmeRank, MPI_COMM_WORLD);
 
-    // I need to first allocate a bunch of std::vectors on all ranks with the global size
     std::vector<real> commChargesA(numGlobalAtoms); 
     std::vector<real> commChargesB(numGlobalAtoms); 
 
@@ -1852,11 +1854,11 @@ void gmx_pme_exchange_charge_data(gmx_pme_t* pme,
     MPI_Bcast((void*) commChargesA.data(), sizeof(real)*numGlobalAtoms, MPI_BYTE, pmeRank, MPI_COMM_WORLD);
     MPI_Bcast((void*) commChargesB.data(), sizeof(real)*numGlobalAtoms, MPI_BYTE, pmeRank, MPI_COMM_WORLD);
 
-    fprintf(stderr, " reiniting gmx pme atoms from rank %d, numatoms=%d, charges %d, numGlobalAtoms %d\n", 
-        rank, numAtoms, chargesA.size(), numGlobalAtoms);
+    fprintf(stderr, " reiniting gmx pme atoms from rank %d, charges %d, numGlobalAtoms %d\n", 
+        commRank, numCharges, numGlobalAtoms);
     
     // All ranks have updated charges -> update the GPU data structures now
-    pme_gpu_reinit_atoms(pme->gpu, numGlobalAtoms, chargesA.data(), chargesB.data());
+    pme_gpu_reinit_atoms(pme->gpu, numGlobalAtoms, commChargesA.data(), commChargesB.data()); 
 }
 #endif
 

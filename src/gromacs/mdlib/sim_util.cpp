@@ -759,8 +759,7 @@ static inline void launchPmeGpuSpread(gmx_pme_t*            pmedata,
     pme_gpu_prepare_computation(pmedata, box, wcycle, stepWork);
     
     // JM: gotta flag the ranks here as PME / PP
-    // xxx todo flag startup
-    gmx_pme_exchange_charge_data(pmedata, this->numAtom, nullptr, nullptr);
+    gmx_pme_exchange_charge_data(pmedata, 0, nullptr, nullptr);
 
     bool                           useGpuDirectComm         = false;
     gmx::PmeCoordinateReceiverGpu* pmeCoordinateReceiverGpu = nullptr;
@@ -1521,7 +1520,7 @@ void do_force(FILE*                               fplog,
         }
 #if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
         launchPmeGpuSpread( fr->pmedata, 
-                            box,kk
+                            box,
                             stepWork, 
                             localXReadyOnDevice, 
                             lambda[static_cast<int>(FreeEnergyPerturbationCouplingType::Coul)],

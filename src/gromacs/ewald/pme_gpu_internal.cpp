@@ -1099,7 +1099,6 @@ static void pme_gpu_reinit_grids(PmeGpu* pmeGpu)
     pme_gpu_realloc_grids(pmeGpu);
 
     // Only the PME-assigned rank does FFT, so if we're strong-scaling spline we just avoid reiniting it
-    // How do I flag if this if havePMEonThisRank? I think we should flag it on PmeGpu
     if(pmeGpu->isPmeRank)
     {
         pme_gpu_reinit_3dfft(pmeGpu);
