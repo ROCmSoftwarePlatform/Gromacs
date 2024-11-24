@@ -426,12 +426,14 @@ static int gmx_pme_recv_coeffs_coords(struct gmx_pme_t*            pme,
                 }
             }
         }
+
+#if 0
         // other ranks need to save this information somewhere to launch kernels later
         gmx_pme_exchange_charge_data(pme, 
                                      pme_pp->chargeA.size(), 
                                      (pme_pp->chargeA.data()), 
                                      (pme_pp->chargeB.data()));
-                                     
+#endif                                     
         if (cnb.flags & PP_PME_COORD)
         {
             if (atomSetChanged)
@@ -703,6 +705,11 @@ int gmx_pmeonly(struct gmx_pme_t*               pme,
     clear_nrnb(mynrnb);
 
     count = 0;
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+    // it would also be good to send the step number to see if we really need to exchange anything or not.
+    gmx_pme_exchange_charge_data(pme, pme_pp->chargeA.size(), (pme_pp->chargeA.data()), (pme_pp->chargeB.data()));
+#endif
+
     do /****** this is a quasi-loop over time steps! */
     {
         /* The reason for having a loop here is PME grid tuning/switching */

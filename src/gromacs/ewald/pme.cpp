@@ -1860,6 +1860,7 @@ void gmx_pme_exchange_charge_data(gmx_pme_t* pme,
     // All ranks have updated charges -> update the GPU data structures now
     pme_gpu_reinit_atoms(pme->gpu, numGlobalAtoms, commChargesA.data(), commChargesB.data()); 
 }
+
 #endif
 
 void gmx_pme_reinit_atoms(gmx_pme_t*                pme,

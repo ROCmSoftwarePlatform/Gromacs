@@ -151,6 +151,7 @@
 #include "gromacs/utility/logger.h"
 #include "gromacs/utility/real.h"
 #include "gromacs/utility/smalloc.h"
+#include "gromacs/ewald/pme.h"
 
 #include "legacysimulator.h"
 #include "replicaexchange.h"
@@ -369,6 +370,10 @@ void gmx::LegacySimulator::do_md()
         // Local state only becomes valid now.
         dd_init_local_state(*cr->dd, state_global, state);
 
+#if defined(GMX_THREAD_MPI) && defined(GMX_SCALE_SPLINE_MGPU) && defined(GMX_GPU_HIP)
+        // need to check if the rank is separate for PME and whatnot 
+        gmx_pme_exchange_charge_data(fr->pmedata, 0, nullptr, nullptr);
+#endif
         /* Distribute the charge groups over the nodes from the master node */
         dd_partition_system(fplog,
                             mdlog,

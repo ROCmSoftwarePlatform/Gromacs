@@ -758,9 +758,6 @@ static inline void launchPmeGpuSpread(gmx_pme_t*            pmedata,
 {
     pme_gpu_prepare_computation(pmedata, box, wcycle, stepWork);
     
-    // JM: gotta flag the ranks here as PME / PP
-    gmx_pme_exchange_charge_data(pmedata, 0, nullptr, nullptr);
-
     bool                           useGpuDirectComm         = false;
     gmx::PmeCoordinateReceiverGpu* pmeCoordinateReceiverGpu = nullptr;
     pme_gpu_launch_spread(

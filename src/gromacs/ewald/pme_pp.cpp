@@ -345,7 +345,7 @@ void gmx_pme_send_parameters(const t_commrec*           cr,
         flags |= (flags << 1);
     }
 
-    gmx_pme_send_coeffs_coords(nullptr,
+   gmx_pme_send_coeffs_coords(nullptr,
                                cr,
                                flags,
                                chargeA,
